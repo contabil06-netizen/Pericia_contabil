@@ -1,5 +1,5 @@
 # CONTEXTO — Projeto PERITUS (Automação Contábil Pericial)
-> Copie e cole este arquivo no início de uma nova conversa.
+
 
 ---
 
