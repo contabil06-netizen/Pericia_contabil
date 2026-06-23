@@ -12,6 +12,7 @@ from typing import Optional
 
 from core.detector import detectar_layout, extrair_metadados_cabecalho
 from core.models import Balancete, RelatorioFinal
+from core.ocr import is_scanned_pdf
 from core.parsers import get_parser
 from core.validator import validar_balancete
 from core.mapper import carregar_mapa_cliente, mapear
@@ -138,8 +139,15 @@ def _processar_pdf(
     """
     # Detecção
     layout = detectar_layout(pdf_path)
+    # Override: se o YAML do cliente declara um layout explícito, usa esse.
+    # Necessário para PDFs escaneados onde pdfplumber não extrai texto.
+    if config.get("layout"):
+        layout = config["layout"]
     resultado["layout_detectado"] = layout
     meta   = extrair_metadados_cabecalho(pdf_path)
+    # Para PDFs escaneados, pdfplumber não extrai empresa — usa o YAML como fallback
+    if not meta.get("empresa") and config.get("cliente"):
+        meta["empresa"] = config["cliente"]
     resultado["empresa"] = meta.get("empresa", "")
 
     log(f"  ✓ Layout: {layout}", "ok")
@@ -148,8 +156,18 @@ def _processar_pdf(
 
     # Parsing
     log("  [1/4] Extraindo contas...", "info")
+
+    if is_scanned_pdf(pdf_path):
+        log("  ⚠ PDF escaneado detectado — aplicando OCR (pode demorar)...", "aviso")
+
     parser = get_parser(layout)
-    contas = parser.parsear(pdf_path)
+    try:
+        contas = parser.parsear(pdf_path)
+    except RuntimeError as e:
+        resultado["status"] = "erro"
+        resultado["avisos"].append(str(e))
+        log(f"  ✗ {e}", "erro")
+        return None
 
     if not contas:
         resultado["status"] = "erro"

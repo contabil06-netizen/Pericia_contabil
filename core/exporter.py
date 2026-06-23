@@ -51,7 +51,20 @@ def _slug(texto: str) -> str:
     texto = unicodedata.normalize("NFD", texto)
     texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
     texto = re.sub(r"[^\w\s-]", "", texto).strip()
-    return re.sub(r"[\s]+", "_", texto)[:40]
+    return re.sub(r"[\s]+", "_", texto)[:50]
+
+
+def _limpar_empresa(nome: str) -> str:
+    """
+    Remove artefatos de extração do nome da empresa.
+    Casos tratados:
+    - "Empresa: FRIGORIFICO TAMOYO LTDA Folha: 00"  → "FRIGORIFICO TAMOYO LTDA"
+    - "Empresa FRIGORIFICO TAMOYO LTDA Folha: 0001" → "FRIGORIFICO TAMOYO LTDA"
+    - "FT TRANSPORTE LTDA"                           → "FT TRANSPORTE LTDA" (inalterado)
+    """
+    nome = re.sub(r'(?i)^Empresa[:\s]+', '', nome).strip()
+    nome = re.sub(r'(?i)\s+Folha[:\s]*\S*\s*$', '', nome).strip()
+    return nome
 
 
 # ---------------------------------------------------------------------------
@@ -64,10 +77,11 @@ def exportar(
     relatorio_anterior: Optional[RelatorioFinal] = None,
 ) -> str:
     Path(output_dir).mkdir(exist_ok=True)
-    periodo  = relatorio.balancete.periodo_fim.replace("/", "-")
-    ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
-    slug     = _slug(relatorio.balancete.empresa)
-    out_path = f"{output_dir}/{slug}_{periodo}_{ts}.xlsx"
+    empresa  = _limpar_empresa(relatorio.balancete.empresa) or "Empresa"
+    slug     = _slug(empresa)
+    periodo  = relatorio.balancete.periodo_fim.replace("/", "-") \
+               or datetime.now().strftime("%m-%Y")
+    out_path = f"{output_dir}/Empresa_{slug}_{periodo}.xlsx"
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)

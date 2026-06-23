@@ -63,6 +63,16 @@ def extrair_metadados_cabecalho(pdf_path: str) -> dict:
         with pdfplumber.open(pdf_path) as pdf:
             texto = pdf.pages[0].extract_text() or ""
 
+        # Fallback OCR: se pdfplumber não extraiu texto (PDF escaneado),
+        # usa OCR da primeira página para obter os metadados do cabeçalho.
+        if not texto.strip():
+            try:
+                from core.ocr import extrair_texto_ocr
+                paginas_ocr = extrair_texto_ocr(pdf_path)
+                texto = paginas_ocr[0] if paginas_ocr else ""
+            except Exception:
+                pass
+
         cnpj_match = re.search(
             r'CNPJ[:\s]+([0-9]{2}[\.\-]?[0-9]{3}[\.\-]?[0-9]{3}[\/\-]?[0-9]{4}[\-]?[0-9]{2})',
             texto, re.IGNORECASE

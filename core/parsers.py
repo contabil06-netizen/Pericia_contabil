@@ -69,6 +69,9 @@ class BaseParser(ABC):
         pass
 
     def _extrair_texto_paginas(self, pdf_path: str) -> list[str]:
+        from core.ocr import is_scanned_pdf, extrair_texto_ocr
+        if is_scanned_pdf(pdf_path):
+            return extrair_texto_ocr(pdf_path)  # RuntimeError propaga naturalmente
         paginas = []
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
@@ -586,6 +589,92 @@ class ParserVerificacao(BaseParser):
 
 
 # ---------------------------------------------------------------------------
+# Parser: FS Sequencial (F S Soluções Contábeis) — códigos inteiros sequenciais
+# ---------------------------------------------------------------------------
+
+class ParserFSSequencial(BaseParser):
+    """
+    Layout FS Sequencial: códigos inteiros sem separador hierárquico.
+    Ex: 1=ATIVO, 3=DISPONIVEL, 3695=TARGET, 12=CLIENTES, 504=CLIENTES DIVERSOS
+
+    Características:
+    - Saldo sempre com sufixo D/C: '5.197.229,63D', '4.069.944,64C'
+    - 6 colunas: Código  Descrição  Sal.Ant  Débito  Crédito  Sal.Atual
+    - PDFs escaneados — texto extraído via OCR (artefatos de ruído esperados)
+    - TODAS as contas marcadas como ANALITICA para o mapper conseguir acessá-las.
+      O mapeamento usa correspondência EXATA de código (não prefixo).
+    """
+
+    RE_LINHA = re.compile(
+        r'^(\d+)'                       # código inteiro (1, 12, 3695, ...)
+        r'\s+(.+?)'                     # descrição (lazy — absorve ruído OCR)
+        r'\s+([\d\.,]+[DC]?)'           # saldo anterior
+        r'\s+([\d\.,]+[DC]?)'           # débito
+        r'\s+([\d\.,]+[DC]?)'           # crédito
+        r'\s+([\d\.,]+[DC]?)'           # saldo atual
+        r'\s*$'
+    )
+
+    # Palavras-chave de linhas de cabeçalho/rodapé que devem ser ignoradas
+    _IGNORAR = re.compile(
+        r'C[oó]digo|Descri|Saldo|Folha|Empresa|C\.N\.P|Per[ií]odo|Sistema|BALANCETE',
+        re.IGNORECASE
+    )
+
+    def parsear(self, pdf_path: str) -> list[ContaContabil]:
+        contas: list[ContaContabil] = []
+        paginas = self._extrair_texto_paginas(pdf_path)
+
+        for texto in paginas:
+            for linha in texto.split("\n"):
+                linha = linha.strip()
+                if not linha:
+                    continue
+                # Rejeitar linhas de cabeçalho/rodapé antes de tentar o regex
+                if self._IGNORAR.search(linha):
+                    continue
+                conta = self._parsear_linha(linha)
+                if conta:
+                    contas.append(conta)
+
+        return contas
+
+    def _parsear_linha(self, linha: str) -> ContaContabil | None:
+        m = self.RE_LINHA.match(linha)
+        if not m:
+            return None
+
+        codigo, descricao, sal_ant, debito, credito, sal_atual = m.groups()
+
+        # Limpar artefatos OCR do início da descrição (_ATIVO, —ATIVO, etc.)
+        descricao = re.sub(r'^[_\-—\s]+', '', descricao).strip()
+        # Remover tokens de ruído isolados no meio da descrição (ex: ". :", "' :")
+        descricao = re.sub(r'\s*[\.\'\":;/]\s*:\s*', ' ', descricao).strip()
+
+        val_ant, _  = _limpar_valor(sal_ant)
+        val_deb, _  = _limpar_valor(debito)
+        val_cre, _  = _limpar_valor(credito)
+        val_atu, nat = _limpar_valor(sal_atual)
+
+        # Inferir natureza pelo grupo contábil se OCR não trouxe D/C
+        if nat == NaturezaSaldo.ZERO and val_atu > 0:
+            nat = NaturezaSaldo.DEVEDOR if codigo.startswith(("1", "3", "4")) \
+                  else NaturezaSaldo.CREDOR
+
+        return ContaContabil(
+            codigo=codigo,
+            descricao=descricao,
+            tipo=TipoConta.ANALITICA,   # todas analíticas — mapper usa exact match
+            natureza=nat,
+            saldo_anterior=val_ant,
+            debito=val_deb,
+            credito=val_cre,
+            saldo_atual=val_atu,
+            nivel=1,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
 
@@ -596,6 +685,7 @@ _PARSERS: dict[str, type[BaseParser]] = {
     "contacerta": ParserContaCerta,
     "somar": ParserSomar,
     "ctc007": ParserCTC007,
+    "fs_sequencial": ParserFSSequencial,
 }
 
 

@@ -125,6 +125,11 @@ def _somar_grupo(balancete: Balancete, grupo_cfg: dict, nome_grupo: str) -> Grup
 def _buscar_contas(balancete: Balancete, termo: str, estrategia: str) -> list[ContaContabil]:
     contas = balancete.contas_analiticas
     if estrategia == "codigo" or (estrategia == "auto" and re.match(r'^[\d\.]+$', termo)):
+        # Códigos inteiros puros (sem ponto) usam correspondência EXATA.
+        # Evita que "3" capture 3695, 3719, 3749 etc. no layout fs_sequencial.
+        # Códigos hierárquicos com ponto (ex: "1.1.1") continuam usando startswith.
+        if "." not in termo:
+            return [c for c in contas if c.codigo == termo]
         return [c for c in contas if c.codigo.startswith(termo)]
     termo_lower = termo.lower()
     return [c for c in contas if termo_lower in c.descricao.lower()]

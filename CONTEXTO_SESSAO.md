@@ -1,6 +1,5 @@
 # CONTEXTO — Projeto PERITUS (Automação Contábil Pericial)
 
-
 ---
 
 ## Identidade do projeto
