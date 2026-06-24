@@ -123,6 +123,7 @@ _TIPO_SINAL: dict = {
     "deducao":            -1,
     "custo":              -1,
     "despesa":            -1,
+    "tributaria":         -1,   # despesas tributárias — separadas para cálculo correto do EBITDA
     "outra_receita":       1,
     "outra_despesa":      -1,
     "depreciacao":         1,
@@ -185,6 +186,7 @@ def _apurar_resultado(rel) -> Decimal:
             - acc.get("deducao",            Decimal("0"))
             - acc.get("custo",              Decimal("0"))
             - acc.get("despesa",            Decimal("0"))
+            - acc.get("tributaria",         Decimal("0"))
             + acc.get("outra_receita",      Decimal("0"))
             - acc.get("outra_despesa",      Decimal("0"))
             + acc.get("receita_financeira", Decimal("0"))
@@ -796,9 +798,13 @@ def _linha_bp(ws, row, conta, sal_ant, sal_atu,
 
 
 def _saldo_bp(saldo: Decimal, conta) -> float:
-    val = float(saldo)
-    if conta.codigo.startswith("2") and val < 0:
-        return -val
+    val = float(abs(saldo))
+    # Ativo (1.x): natureza normal = DEVEDOR; saldo credor = invertido → negativo (parênteses)
+    if conta.codigo.startswith("1"):
+        return -val if conta.natureza == NaturezaSaldo.CREDOR else val
+    # Passivo/PL (2.x): natureza normal = CREDOR; saldo devedor = invertido → negativo (parênteses)
+    if conta.codigo.startswith("2"):
+        return -val if conta.natureza == NaturezaSaldo.DEVEDOR else val
     return val
 
 
