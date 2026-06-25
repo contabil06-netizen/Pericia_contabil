@@ -139,11 +139,11 @@ dre_estrutura:
         label: "Receitas Financeiras (Mútuo Intercompany PF)"
         tipo: receita
         prefixos:
-          - "2009"   # [2009] RECEITAS FINANCEIRAS E OUTRAS
-                     #   [2016] RECEITAS FINANCEIRAS E OUTRAS
-                     #     [2023] Receitas Financeiras (juros s/ mútuo à PF)
-                     # YTD (Saldo Ant 04/26): R$5.591,31C
-                     # Movto abr/26: R$1.271,89C
+          - "2023"   # [2023] Receitas Financeiras  ← CONTA FOLHA (leaf)
+                     #   Hierarquia: [2009]RECEITAS FINANCEIRAS E OUTRAS → [2016] → [2023]
+                     #   PERITUS lê contas folha; IDs pai [2009]/[2016] retornam zero.
+                     #   Saldo Ant 04/26 (YTD acum. 02+03): R$5.591,31C
+                     #   Movto abr/26 (período): R$1.271,89C
 
   # ── 02. Deduções da Receita Bruta ────────────────────────
   deducoes_receita:
@@ -197,11 +197,11 @@ dre_estrutura:
         label: "Tributárias"
         tipo: tributaria
         prefixos:
-          - "2940"   # [2940] DESPESAS TRIBUTÁRIAS
-                     #   [3031] TRIBUTOS MUNICIPAIS
-                     #     [3052] Impostos e Taxas - Municipal: R$658,51D
-                     # ATENÇÃO: valor integralmente reconhecido em 02/2026.
-                     # Saldo zero nos movimentos de 03/26 e 04/26.
+          - "3052"   # [3052] Impostos e Taxas - Municipal  ← CONTA FOLHA (leaf)
+                     #   Hierarquia: [2940]DESPESAS TRIBUTÁRIAS → [3031]TRIBUTOS MUNICIPAIS → [3052]
+                     #   PERITUS lê contas folha; IDs pai [2940]/[3031] retornam zero.
+                     #   ATENÇÃO: valor R$658,51D integralmente reconhecido em 02/2026 (ISS Municipal).
+                     #   Saldo zero nos movimentos de 03/26 e 04/26.
 
   # ── 07. Outras Receitas (Despesas) Operacionais ──────────
   outras_receitas_despesas:

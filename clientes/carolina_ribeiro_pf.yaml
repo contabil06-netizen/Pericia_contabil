@@ -267,9 +267,11 @@ dre_estrutura:
         label: "Tributárias"
         tipo: tributaria
         prefixos:
-          - "2940"   # [2940] DESPESAS TRIBUTÁRIAS
-                     #   [2947] TRIBUTOS FEDERAIS
-                     #     [9461] Impostos e Taxas: R$4.004,20D (YTD 04/26)
+          - "9461"   # [9461] Impostos e Taxas  ← CONTA FOLHA (leaf)
+                     #   Hierarquia: [2940]DESPESAS TRIBUTÁRIAS → [2947]TRIBUTOS FEDERAIS → [9461]
+                     #   PERITUS lê contas folha; IDs pai [2940]/[2947] retornam zero.
+                     #   Valores: R$2.093,26D (03/26 YTD) | R$1.910,94D (movto abr/26)
+                     #            R$4.004,20D (04/26 YTD acumulado)
 
   # ── 07. Outras Receitas (Despesas) Operacionais ──────────
   outras_receitas_despesas:
@@ -312,10 +314,11 @@ dre_estrutura:
         label: "Receitas Financeiras"
         tipo: receita_financeira
         prefixos:
-          - "2009"   # [2009] RECEITAS FINANCEIRAS E OUTRAS
-                     #   [2016] RECEITAS FINANCEIRAS E OUTRAS
-                     #     [2037] Receitas Diversas (juros/créditos bancários)
-                     # YTD 04/2026: R$3.151,23C
+          - "2037"   # [2037] Receitas Diversas  ← CONTA FOLHA (leaf)
+                     #   Hierarquia: [2009]RECEITAS FINANCEIRAS E OUTRAS → [2016] → [2037]
+                     #   PERITUS lê contas folha; IDs pai [2009]/[2016] retornam zero.
+                     #   Valores: R$1.711,23C (03/26 YTD) | R$1.440,00C (movto abr/26)
+                     #            R$3.151,23C (04/26 YTD acumulado)
       despesas_financeiras:
         label: "Despesas Financeiras"
         tipo: despesa_financeira
