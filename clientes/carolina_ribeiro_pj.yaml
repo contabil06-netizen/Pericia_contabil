@@ -1,0 +1,274 @@
+# ============================================================
+# MAPA DE CONTAS — CAROLINA RIBEIRO DA SILVA LTDA (CNPJ / PJ)
+# CNPJ: 59.297.718/0001-34
+# Sistema: ContaCerta Organização Contábil Ltda (cliente 01059)
+# Layout: contacerta
+# Gerado com base nos balancetes 02/2026, 03/2026 e 04/2026
+# Grupo: Grupo Carolina Ribeiro (PF + PJ)
+# Setor: Holding Financeira (empresa sem receita operacional)
+#
+# OBSERVAÇÕES CONTÁBEIS:
+#   - Empresa sem atividade operacional: ÚNICA fonte de renda é
+#     juros do mútuo intercompany concedido à PF (Carolina Ribeiro
+#     da Silva — CPF). PIS/COFINS incide sobre essas receitas.
+#   - Disponibilidades robustas (R$1,05M em 04/26): Caixa (R$277k),
+#     Banco Unicred Conta Corrente (R$48k) e Aplicações Financeiras
+#     CDB/RDB Unicred + Nubank (R$725k). IOF incide sobre as aplicações.
+#   - Passivo LP: empréstimo mútuo recebido da PF (R$1,09M em 04/26)
+#     → espelho de [26069] no Ativo Circulante PF
+#   - PL NEGATIVO: Capital R$20k + Lucros R$11k vs Prejuízos R$32k
+#     → PL = -R$1.063,27D
+#   - Despesas TRIBUTÁRIAS [2940]: R$658,51 reconhecido integralmente
+#     em 02/2026 (ISS Municipal); saldo zero em 04/2026
+#
+# ATENÇÃO — Layout ContaCerta (bracket IDs):
+#   Mesma regra do arquivo PF: correspondência EXATA pelo ID sintético.
+#
+# ATENÇÃO — DRE 04/2026 mostra saldo do PERÍODO (não acumulado):
+#   O balancete PJ de 04/2026 apresenta as contas de resultado com
+#   "Saldo Atual" = movimento do mês (não YTD). O Saldo Anterior
+#   contém o acumulado até 03/2026. Para obter o YTD, some
+#   Saldo Anterior + Saldo Atual do período. PERITUS deve aplicar
+#   a configuração de leitura adequada ao ler este PDF.
+# ============================================================
+
+cliente: "Carolina Ribeiro da Silva Ltda"
+cnpj: "59.297.718/0001-34"
+layout: "contacerta"
+grupo: "Grupo Carolina Ribeiro"
+
+# ------------------------------------------------------------
+# BALANÇO PATRIMONIAL
+# ------------------------------------------------------------
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      # [21] CAIXA E EQUIVALENTES DE CAIXA  (R$1.049.602,43D em 04/26)
+      #   [28] NUMERÁRIOS
+      #     [35] CAIXA
+      #       [42] Caixa: R$276.830,16D
+      #   [49] BANCOS
+      #     [56] BANCOS CONTA MOVIMENTO  (R$47.978,61D)
+      #       [2180] Banco Unicred:                   R$47.978,61D
+      #       [107]  Nu Pagamentos S.A.:               R$0 (trânsito)
+      #     [126] APLICAÇÕES FINANCEIRAS DE LIQUIDEZ IMEDIATA  (R$724.793,66D)
+      #       [2187] Banco Unicred CDB UNI:            R$704.793,66D
+      #       [26055] Aplicação RDB - Nubank:          R$20.000,00D
+      codigos: ["21"]
+
+    impostos_a_recuperar:
+      # [483] OUTROS CRÉDITOS → [490] IMPOSTOS A RECUPERAR → [497] FEDERAIS E ESTADUAIS
+      #   [553] Imposto de Renda Antecipado: R$11.672,84D (cresce mensalmente)
+      codigos: ["483"]
+
+  ativo_nao_circulante:
+
+    investimentos:
+      # [833] INVESTIMENTOS → [840] SOCIETÁRIOS
+      #   [4113] Quotas de Capital - Unicred: R$100,00D (quota mínima na cooperativa)
+      codigos: ["833"]
+
+  passivo_circulante:
+
+    obrigacoes_fiscais:
+      # [1155] OBRIGAÇÕES FISCAIS → [1162] TRIBUTOS A RECOLHER
+      #   [1197] Cofins a Recolher: R$156,66C (04/26)
+      #   [1204] PIS a Recolher:    R$33,96C  (04/26)
+      # PIS/COFINS sobre receitas financeiras do mútuo intercompany
+      codigos: ["1155"]
+
+  passivo_nao_circulante:
+
+    emprestimo_intercompany_lp:
+      # [1470] EMPRÉSTIMOS E FINANCIAMENTOS
+      #   [6920] EMPRESTIMOS MUTUOS
+      #     [26286] Carolina Ribeiro da Silva (CPF — a PF que emprestou à PJ)
+      # Saldo crescente: R$273k(02)→R$388k(03)→R$1.091k(04)
+      # Espelho: PF Ativo Circulante [26069] = mesmos valores
+      codigos: ["1470"]
+
+  patrimonio_liquido:
+
+    capital_social:
+      # [1680] CAPITAL SOCIAL → [1687] → [1694] → [1701] Capital Social
+      #   R$20.000,00C (estável)
+      codigos: ["1680"]
+
+    lucros_acumulados:
+      # [1848] LUCROS ACUMULADOS  (R$11.115,41C — estável)
+      #   [1855] LUCROS NO EXERCÍCIO
+      #     [1862] Lucros no Exercício: R$3.949,36C
+      #   [1869] LUCROS DE EXERCÍCIO ANTERIORES
+      #     [1876] Lucros Acumulados: R$7.166,05C
+      codigos: ["1848"]
+
+    prejuizos_acumulados:
+      # [1890] (-) PREJUIZO ACUMULADO  (R$32.178,68D — estável)
+      #   [1897] (-) PREJUÍZO DO EXERCÍCIO
+      #     [1904] (-) Prejuízo do Exercício: R$31.038,70D
+      #   [1911] (-) PREJUÍZOS DE EXERCÍCIOS ANTERIORES
+      #     [1918] (-) Prejuízos Acumulados: R$1.139,98D
+      # Sinal -1: conta DEVEDORA reduz o PL
+      # PL = R$20.000C + R$11.115C - R$32.179D = -R$1.063,27D (negativo)
+      codigos: ["1890"]
+      sinal: -1
+
+
+# ------------------------------------------------------------
+# ESTRUTURA DA DRE — FORMATO PADRÃO 14 LINHAS
+#
+# PARTICULARIDADE PJ HOLDING FINANCEIRA:
+#   A PJ não tem receita operacional de vendas ou serviços.
+#   A receita ÚNICA é financeira: juros do mútuo concedido
+#   à PF (Carolina Ribeiro da Silva). O ContaCerta classifica
+#   essa receita em [2009]RECEITAS FINANCEIRAS E OUTRAS dentro
+#   de [1939]RESULTADO OPERACIONAL — tratada aqui como receita
+#   bruta operacional (Linha 01), pois é a atividade-fim da empresa.
+#   PIS/COFINS incidem sobre essa receita → Linha 02 (deduções).
+# ------------------------------------------------------------
+dre_estrutura:
+
+  # ── 01. Receita Bruta ────────────────────────────────────
+  receita_bruta:
+    label: "Receita Bruta"
+    tipo: agrupador
+    subgrupos:
+      receitas_financeiras_operacionais:
+        label: "Receitas Financeiras (Mútuo Intercompany PF)"
+        tipo: receita
+        prefixos:
+          - "2009"   # [2009] RECEITAS FINANCEIRAS E OUTRAS
+                     #   [2016] RECEITAS FINANCEIRAS E OUTRAS
+                     #     [2023] Receitas Financeiras (juros s/ mútuo à PF)
+                     # YTD (Saldo Ant 04/26): R$5.591,31C
+                     # Movto abr/26: R$1.271,89C
+
+  # ── 02. Deduções da Receita Bruta ────────────────────────
+  deducoes_receita:
+    label: "(-) Deduções da Receita Bruta (PIS/COFINS)"
+    tipo: deducao
+    prefixos:
+      - "2044"   # [2044] (-) DEDUÇÕES DA RECEITA BRUTA
+                 #   [2079] (-) IMPOSTOS S/ VENDAS
+                 #     [2093] (-) PIS s/ Faturamento:   R$92,25D (YTD ante abr)
+                 #     [2100] (-) Cofins s/ Faturamento: R$424,94D (YTD ante abr)
+                 # PIS/COFINS calculados sobre as receitas financeiras do mútuo
+
+  # ── 03. Receita Operacional Líquida ──────────────────────
+  receita_operacional_liquida:
+    label: "Receita Operacional Líquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  # ── 04. Custo Operacional ────────────────────────────────
+  custo_operacional:
+    label: "Custo Operacional"
+    tipo: agrupador
+    subgrupos:
+      custo_servicos:
+        label: "Custo dos Serviços"
+        tipo: custo
+        prefixos: []   # PJ holding: sem custo operacional direto
+
+  # ── 05. Lucro (Prejuízo) Bruto ───────────────────────────
+  lucro_bruto:
+    label: "Lucro (Prejuízo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
+
+  # ── 06. Despesas Operacionais ────────────────────────────
+  despesas_operacionais:
+    label: "Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      adm_gerais:
+        label: "Administrativas e Gerais"
+        tipo: despesa
+        prefixos:
+          - "2625"   # [2625] ADMINISTRATIVAS E GERAIS
+                     #   [2632] DESPESAS GERAIS
+                     #     [25894] Despesas c/Cartões: R$31.509,83D (YTD ante abr)
+                     #   [2849] SERVIÇOS PRESTADOS POR TERCEIROS-PF
+                     #     [2856] Assistência Contábil e Fiscal: R$1.350,00D (YTD ante abr)
+                     # Movto abr/26: R$688,28D
+      tributarias:
+        label: "Tributárias"
+        tipo: tributaria
+        prefixos:
+          - "2940"   # [2940] DESPESAS TRIBUTÁRIAS
+                     #   [3031] TRIBUTOS MUNICIPAIS
+                     #     [3052] Impostos e Taxas - Municipal: R$658,51D
+                     # ATENÇÃO: valor integralmente reconhecido em 02/2026.
+                     # Saldo zero nos movimentos de 03/26 e 04/26.
+
+  # ── 07. Outras Receitas (Despesas) Operacionais ──────────
+  outras_receitas_despesas:
+    label: "Outras Receitas (Despesas) Operacionais"
+    tipo: agrupador
+    subgrupos:
+      outras_receitas:
+        label: "Outras Receitas"
+        tipo: outra_receita
+        prefixos: []
+      outras_despesas:
+        label: "Outras Despesas"
+        tipo: outra_despesa
+        prefixos: []
+
+  # ── 08. Resultado Operacional ────────────────────────────
+  resultado_operacional:
+    label: "Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
+
+  # ── 09. Depreciação / Amortização (addback p/ EBITDA) ────
+  depreciacao_amortizacao:
+    label: "Depreciação / Amortização"
+    tipo: depreciacao
+    prefixos: []   # PJ holding: sem imobilizado depreciável
+
+  # ── 10. EBITDA ───────────────────────────────────────────
+  ebitda:
+    label: "EBITDA"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa + outra_receita - outra_despesa + depreciacao"
+
+  # ── 11. Receitas (Despesas) Financeiras ──────────────────
+  financeiras:
+    label: "Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+      receitas_financeiras_sec:
+        label: "Receitas Financeiras Secundárias"
+        tipo: receita_financeira
+        prefixos: []   # Receita principal já mapeada na Linha 01
+      despesas_financeiras:
+        label: "Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "2884"   # [2884] DESPESAS FINANCEIRAS
+                     #   [2891] FINANCEIRAS
+                     #     [2898] Despesas Bancárias: R$18,00D (somente até 03/26)
+                     #     [2964] IOF s/ Aplicações Financeiras (cresce com as aplic.)
+                     #            R$825,49D (YTD ante abr); movto abr: R$273,41D
+
+  # ── 12. Lucro (Prejuízo) Antes do IRPJ e CSLL ───────────
+  antes_irpj:
+    label: "Lucro (Prejuízo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira"
+
+  # ── 13. Provisão para IRPJ e CSLL ────────────────────────
+  provisao_irpj:
+    label: "Provisão para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []   # Não identificado nos balancetes do período
+                   # (IRPJ antecipado [553] está no Ativo como antecipação)
+
+  # ── 14. Lucro (Prejuízo) Líquido do Período ──────────────
+  lucro_liquido:
+    label: "Lucro (Prejuízo) Líquido do Período"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira - provisao_ir"

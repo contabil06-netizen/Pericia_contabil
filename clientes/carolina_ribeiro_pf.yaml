@@ -1,0 +1,345 @@
+# ============================================================
+# MAPA DE CONTAS — CAROLINA RIBEIRO DA SILVA (CPF / Pessoa Física)
+# CPF: 099.365.276-07
+# Sistema: ContaCerta Organização Contábil Ltda (cliente 00721)
+# Layout: contacerta
+# Gerado com base nos balancetes 02/2026, 03/2026 e 04/2026
+# Grupo: Grupo Carolina Ribeiro (PF + PJ)
+# Setor: Produtora Rural / Agropecuária (soja, milho, semente)
+#
+# OBSERVAÇÕES CONTÁBEIS:
+#   - Produtora rural pessoa física: isenta de PIS/COFINS sobre
+#     receita de venda de produção rural (sem linha 02 de deduções)
+#   - Disponibilidades NEGATIVAS: caixa físico ~R$39k (D) mas
+#     Banco Sicoob ~R$102k (C) = cheque especial → net -R$63k (C)
+#   - Imobilizado expressivo (R$21,52M): terrenos, imóveis rurais,
+#     máquinas agrícolas, veículos — SEM depreciação acumulada no
+#     balancete (linha 09 = R$0)
+#   - Adiantamentos Intercompany PF→PJ [392]: conta-corrente interna
+#     com a PJ (R$1,091M em 04/26); espelho de [26286] no PJ Passivo LP
+#   - PL crescente: Lucros Acumulados [1848] R$18,46M vs Prejuízo
+#     do Exercício [1890] crescendo (R$2,08M→R$2,83M→apurado em dez)
+#   - Ajustes de Exercícios Anteriores [1803]: R$7,57M — reavaliação
+#     de ativos incorporada ao PL sem ser pelo resultado do exercício
+#
+# ATENÇÃO — Layout ContaCerta (bracket IDs):
+#   Os códigos são IDs numéricos internos entre colchetes ([21], [854]).
+#   NÃO formam hierarquia por prefixo — "18" não é pai de "189".
+#   O engine deve usar os sintéticos como CORRESPONDÊNCIA EXATA,
+#   capturando o saldo já agregado do grupo hierárquico.
+#   Para DRE (prefixos), o match é efetivamente exato pois filhos
+#   não compartilham os dígitos iniciais do pai.
+# ============================================================
+
+cliente: "Carolina Ribeiro da Silva"
+cpf: "099.365.276-07"
+layout: "contacerta"
+grupo: "Grupo Carolina Ribeiro"
+
+# ------------------------------------------------------------
+# BALANÇO PATRIMONIAL
+# Cada `codigos` aponta para o ID SINTÉTICO do grupo.
+# O engine usa correspondência EXATA (não prefixo) para
+# capturar o saldo agregado de todos os filhos analíticos.
+# ------------------------------------------------------------
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      # [21] CAIXA E EQUIVALENTES DE CAIXA  (saldo CREDOR em todos os períodos)
+      #   [28] NUMERÁRIOS
+      #     [35] CAIXA
+      #       [42]  Caixa: R$38.952,41D
+      #       [10263] Compra de Rebanho: R$138,00D (conta transitória)
+      #   [49] BANCOS
+      #     [56] BANCOS CONTA MOVIMENTO
+      #       [77]  Banco Bradesco S.A.: saldo zero (02/26) / zero (03/26 em diante)
+      #       [2180] Banco Unicred: R$0 (02/26 tem saldo residual; zero nos demais)
+      #       [106]  Banco Sicoob Noroeste de Minas: R$102.704,81C (cheque especial)
+      # Saldo: R$63.614,40C (negativo = saque a descoberto líquido)
+      codigos: ["21"]
+
+    clientes:
+      # [18807] RECEBÍVEIS
+      #   [203] DUPLICATAS A RECEBER
+      #     [9394] COOPERATIVA AGRICOLA DE UNAI LTDA: R$10.983,91D (estável)
+      codigos: ["18807"]
+
+    adiantamentos_intercompany:
+      # [392] ADIANTAMENTO E EMPRÉSTIMO
+      #   [427] EMPRÉSTIMOS
+      #     [26069] CAROLINA RIBEIRO DA SILVA LTDA (conta-corrente intercompany PF→PJ)
+      # Saldo flutuante: R$273k(02)→R$388k(03)→R$1.091k(04) conforme mútuo
+      # Espelho: PJ Passivo LP [26286] = mesmos valores
+      codigos: ["392"]
+
+    impostos_a_recuperar:
+      # [483] OUTROS CRÉDITOS
+      #   [490] IMPOSTOS A RECUPERAR
+      #     [497] FEDERAIS E ESTADUAIS
+      #       [5771] IRRF a Recuperar: R$16.357,25D (estável)
+      codigos: ["483"]
+
+  ativo_nao_circulante:
+
+    investimentos:
+      # [833] INVESTIMENTOS
+      #   [3402] Consorcios
+      #     [7956] Consorcios Bradesco SA: R$50.387,84D (estável)
+      codigos: ["833"]
+
+    imobilizado:
+      # [854] IMOBILIZADO
+      #   [861] BENS MÓVEIS E IMÓVEIS  (R$21.524.276,88D — estável nos 3 meses)
+      #     [868]  Terrenos e Imóveis:            R$5.030.000,00D
+      #     [889]  Veículos:                      R$853.483,00D
+      #     [910]  Máquinas e Equipamentos:        R$8.010.378,88D
+      #       [10595] Pulverizador Autopropelido:  R$1.107.228,00D
+      #       [3756]  Colheitadeira de Graos:      R$620.486,00D
+      #       [3763]  Plataforma Corte de Graos:   R$178.006,00D
+      #       [4533]  Plantadeira:                 R$198.543,00D
+      #       [22793] Graneleira:                  R$49.132,00D
+      #       [22835] Caminhão:                    R$184.020,00D
+      #     [2725] Imóveis Rurais:                R$5.293.000,00D
+      # Nota: SEM conta de depreciação acumulada no plano de contas PF.
+      codigos: ["854"]
+
+  passivo_circulante:
+
+    fornecedores:
+      # [1036] FORNECEDORES  (R$3.391.352,65C — estável nos 3 meses)
+      #   Principais credores (insumos agrícolas):
+      #   [7015]  AGROPAULISTA COM. REP. PROD. AGR. UNAI:  R$69.181,50C
+      #   [7127]  COOPERATIVA AGRICOLA DE UNAI:             R$18.300,00C
+      #   [7211]  TARUMA AGROCOMERCIAL:                     R$433.326,40C
+      #   [22751] SINOVA INOVAÇÕES AGRICOLAS:               R$284.943,37C
+      #   [22758] TERRA DO BRASIL P. AGROPE. (BURITIS):     R$686.279,99C
+      #   [2256]  PROTEC PRODUTOS AGRICOLAS:               R$1.429.263,10C
+      #   e outros (Pivot, Inquima, Centro-Oeste, Tche, Mapfre, Bradesco Auto)
+      codigos: ["1036"]
+
+  passivo_nao_circulante:
+
+    emprestimos_bancarios_lp:
+      # [1491] EMPRÉSTIMOS BANCÁRIOS
+      #   [113] Emprestimo Banco Sicoob Noroeste de Minas: R$1.088.857,33C (estável)
+      codigos: ["1491"]
+
+    financiamentos_lp:
+      # [1554] FINANCIAMENTOS
+      #   [3721]  Banco Volkswagen:              R$146.099,59C
+      #   [1752]  Banco Bradesco Financiamentos: R$323.836,85C
+      #   [22828] Banco CNH Industrial Capital:  R$1.434.476,39C
+      # Total: R$1.904.412,83C (estável)
+      codigos: ["1554"]
+
+  patrimonio_liquido:
+
+    lucros_acumulados:
+      # [1848] LUCROS ACUMULADOS  (R$18.462.981,15C — estável)
+      #   [1855] LUCROS NO EXERCÍCIO
+      #     [1862] Lucros no Exercício: R$10.425.233,96C
+      #   [1869] LUCROS DE EXERCÍCIO ANTERIORES: R$8.037.747,19C
+      #     [1876] Lucros Acumulados: R$469.064,87C
+      #     [1803] Ajustes de exercicios anteriores: R$7.568.682,32C
+      codigos: ["1848"]
+
+    prejuizos_acumulados:
+      # [1890] (-) PREJUIZO ACUMULADO
+      #   [1897] (-) PREJUÍZO DO EXERCÍCIO
+      #     [1904] (-) Prejuízo do Exercício (devedor, cresce: R$2,08M→R$2,83M)
+      # Sinal -1: conta DEVEDORA reduz o PL
+      # PL líquido = R$18.462.981,15C - R$2.829.187,97D = R$15.633.793,18C ✓
+      codigos: ["1890"]
+      sinal: -1
+
+
+# ------------------------------------------------------------
+# ESTRUTURA DA DRE — FORMATO PADRÃO 14 LINHAS
+#
+# Layout ContaCerta: prefixos = IDs sintéticos dos grupos.
+# Match é efetivamente exato — filhos não compartilham
+# dígitos iniciais com o pai (ex: pai=2625, filhos=2632,2849,2870).
+#
+# PARTICULARIDADE PF PRODUTORA RURAL:
+#   - Sem PIS/COFINS sobre venda de produção própria → Linha 02 vazia
+#   - Custo com pessoal classificado como CUSTO (04.1), não despesa
+#   - Sem depreciação no balancete → Linha 09 = R$0
+#   - DRE acumulada (Saldo Atual = YTD em todos os meses)
+# ------------------------------------------------------------
+dre_estrutura:
+
+  # ── 01. Receita Bruta ────────────────────────────────────
+  receita_bruta:
+    label: "Receita Bruta"
+    tipo: agrupador
+    subgrupos:
+      receita_vendas_agro:
+        label: "Receita de Vendas Agropecuárias"
+        tipo: receita
+        prefixos:
+          - "1946"   # [1946] RECEITA DE VENDAS → [1953] RECEITA DE VENDAS
+                     #   [2831] Receita venda de milho pj
+                     #   [2838] Receita venda de soja pj   ← principal (R$1,62M em 04/26)
+                     #   [4638] Receita venda semente milho pj
+                     # YTD 04/2026: R$1.656.712,90C
+
+  # ── 02. Deduções da Receita Bruta ────────────────────────
+  deducoes_receita:
+    label: "(-) Deduções da Receita Bruta"
+    tipo: deducao
+    prefixos: []   # PF produtora rural: isenta de PIS/COFINS sobre vendas
+
+  # ── 03. Receita Operacional Líquida ──────────────────────
+  receita_operacional_liquida:
+    label: "Receita Operacional Líquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  # ── 04. Custo Operacional ────────────────────────────────
+  custo_operacional:
+    label: "Custo Operacional"
+    tipo: agrupador
+    subgrupos:
+      custo_pessoal_producao:
+        label: "Custo com Pessoal de Produção"
+        tipo: custo
+        prefixos:
+          - "2128"   # [2128] CUSTO DE BENS E SERVIÇOS = [2135] CUSTO FABRIL
+                     #   [2184] GASTOS C/PESSOAL
+                     #     [2191] GASTOS C/PESSOAL FABRICAÇÃO
+                     #       [2198] Salarios e Ordenados
+                     #       [2212] Rescisao Trabalhista (apenas 02/26)
+                     #       [2219] Despesas c/INSS
+                     #       [2226] Despesas c/FGTS
+                     # YTD 04/2026: R$124.333,55D
+
+  # ── 05. Lucro (Prejuízo) Bruto ───────────────────────────
+  lucro_bruto:
+    label: "Lucro (Prejuízo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
+
+  # ── 06. Despesas Operacionais ────────────────────────────
+  despesas_operacionais:
+    label: "Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      despesas_pessoal_adm:
+        label: "Despesas com Pessoal (Adm)"
+        tipo: despesa
+        prefixos:
+          - "2485"   # [2485] DESPESAS C/PESSOAL
+                     #   [2492] DESPESAS COM PESSOAL
+                     #     [2597] Uniformes: R$759,00D (somente em 02/26, saldo zero após)
+                     # ATENÇÃO: conta DORMANTE — existe somente em 02/26 (saldo zero
+                     # ao fechamento). Ausente em 03/26 e 04/26. PERITUS deve
+                     # retornar zero ao não localizar o código — sem erro fatal.
+      adm_gerais:
+        label: "Administrativas e Gerais"
+        tipo: despesa
+        prefixos:
+          - "2625"   # [2625] ADMINISTRATIVAS E GERAIS
+                     #   [2632] DESPESAS GERAIS:
+                     #     [2646] Energia Elétrica, [2653] Telefone
+                     #     [2681] Combustíveis e Lubrificantes (expressivo)
+                     #     [2716] Conservação do Imobilizado
+                     #     [2723] Fretes e Carretos, [2737] Manutenção Sistemas
+                     #     [2793] Sindicatos e Associações, [2800] Seguros
+                     #     [3346] Internet, [4522] Ração p/Gado
+                     #     [2712] Fertilizantes (expressivo: R$249k em 04/26)
+                     #     [8915] Material de EPI
+                     #     [9566] Desp.c/Maquinas e Equip., [5687] Despesas Diversas
+                     #     [19090] Despesas c/Cantina, [19097] Consultoria Agrícola
+                     #     [19615] IPVA (aparece em 04/26), [21806] Despesas c/Armazem
+                     #   [2849] SERVIÇOS PRESTADOS POR TERCEIROS-PF:
+                     #     [2856] Assistência Contábil e Fiscal
+                     #     [10344] Assistência em Segurança do Trabalho
+                     #     [11246] Assistencia Veterinaria (a partir de 03/26)
+                     #   [2870] SERVIÇOS PRESTADOS POR TERCEIROS-PJ:
+                     #     [10021] Serviço analises/exames tecnicos de solo (04/26)
+                     #     [5022]  Assistência Contábil e Fiscal
+                     #     [25712] Honorários Advocatícios (expressivo: ~R$68k em 04/26)
+                     #     [25719] Despesas com consulta medica
+                     # YTD 04/2026: R$919.440,80D
+      tributarias:
+        label: "Tributárias"
+        tipo: tributaria
+        prefixos:
+          - "2940"   # [2940] DESPESAS TRIBUTÁRIAS
+                     #   [2947] TRIBUTOS FEDERAIS
+                     #     [9461] Impostos e Taxas: R$4.004,20D (YTD 04/26)
+
+  # ── 07. Outras Receitas (Despesas) Operacionais ──────────
+  outras_receitas_despesas:
+    label: "Outras Receitas (Despesas) Operacionais"
+    tipo: agrupador
+    subgrupos:
+      outras_receitas:
+        label: "Outras Receitas"
+        tipo: outra_receita
+        prefixos: []
+      outras_despesas:
+        label: "Outras Despesas"
+        tipo: outra_despesa
+        prefixos: []
+
+  # ── 08. Resultado Operacional ────────────────────────────
+  resultado_operacional:
+    label: "Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
+
+  # ── 09. Depreciação / Amortização (addback p/ EBITDA) ────
+  depreciacao_amortizacao:
+    label: "Depreciação / Amortização"
+    tipo: depreciacao
+    prefixos: []   # PF não registra depreciação no balancete — linha informativa (R$0)
+
+  # ── 10. EBITDA ───────────────────────────────────────────
+  ebitda:
+    label: "EBITDA"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa + outra_receita - outra_despesa + depreciacao"
+
+  # ── 11. Receitas (Despesas) Financeiras ──────────────────
+  financeiras:
+    label: "Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+      receitas_financeiras:
+        label: "Receitas Financeiras"
+        tipo: receita_financeira
+        prefixos:
+          - "2009"   # [2009] RECEITAS FINANCEIRAS E OUTRAS
+                     #   [2016] RECEITAS FINANCEIRAS E OUTRAS
+                     #     [2037] Receitas Diversas (juros/créditos bancários)
+                     # YTD 04/2026: R$3.151,23C
+      despesas_financeiras:
+        label: "Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "2884"   # [2884] DESPESAS FINANCEIRAS
+                     #   [2891] FINANCEIRAS
+                     #     [2898] Despesas Bancárias: R$170,00D
+                     #     [5694] IOF: R$597,02D
+                     # YTD 04/2026: R$767,02D
+
+  # ── 12. Lucro (Prejuízo) Antes do IRPJ e CSLL ───────────
+  antes_irpj:
+    label: "Lucro (Prejuízo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira"
+
+  # ── 13. Provisão para IRPJ e CSLL ────────────────────────
+  provisao_irpj:
+    label: "Provisão para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []   # Não identificado nos balancetes do período
+
+  # ── 14. Lucro (Prejuízo) Líquido do Período ──────────────
+  lucro_liquido:
+    label: "Lucro (Prejuízo) Líquido do Período"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira - provisao_ir"
