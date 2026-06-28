@@ -1,0 +1,297 @@
+# ============================================================
+# MAPA DE CONTAS — FT TRANSPORTE LTDA (CONSOLIDADO)
+# CNPJ: 25.501.990/0001-72
+# Endereço: Rodovia Cornélio Vernizzi, 242, Letra A, Planalto, Estiva/MG
+# Sistema contábil: F S SOLUÇÕES CONTABEIS LTDA
+# Layout: fs_sequencial (códigos inteiros sequenciais sem separador)
+# Consolidado: Empresas 90 e 154
+# Gerado com base nos balancetes: 12/2025, 01/2026, 02/2026 e 03/2026
+#
+# ATENÇÃO — Layout especial (fs_sequencial):
+#   Diferente dos layouts Socium (pontos) e generico_hifen (hífens),
+#   este plano de contas usa inteiros sequenciais simples como códigos.
+#   Ex: sintético "3" (Disponível) pai de "4" (Caixa) e "7" (Bancos),
+#   que por sua vez são pais de "5" (Caixa Geral), "3695" (Target) etc.
+#
+#   O prefixo simples NÃO funciona neste layout porque:
+#     - "3" como prefixo capturaria 3695, 3719, 3749... (fornecedores!)
+#     - "12" como prefixo capturaria 120, 121, 125, 129 (imobilizado!)
+#     - "20" como prefixo capturaria 2017, 2023, 2026... (fornecedores!)
+#
+#   Solução: o campo `codigos` lista o CÓDIGO SINTÉTICO do grupo.
+#   O engine deve tratar cada entrada como correspondência EXATA —
+#   não como prefixo — para capturar o valor já agregado do grupo.
+#
+# Setor: Transporte Rodoviário de Cargas
+# Observações contábeis:
+#   - Frota expressiva: Veículos R$10.836.726,39D (bruto)
+#   - Depreciação acumulada veículos: R$9.054.688,13C — valor líquido baixo
+#   - Financiamentos: consórcios (Caixa, Volvo, Ancora, Randon, Safra,
+#     Rodobens) e Empréstimos Caixa — todos no PC (cod 382)
+#   - PNC: apenas Empréstimo dos Sócios (R$139.018,00C — cod 3906)
+#   - Parcelamentos tributários relevantes: ICMS (cod 3553) +
+#     PGFN 3817734 (cod 3742) e PGFN 3817737 (cod 3743)
+#     com redutora de juros/multas (cod 3601)
+#   - Patrimônio Líquido NEGATIVO: Prejuízos Acumulados (cod 267)
+#     de ~R$10,2M superam Capital Social de R$493.000,00
+#   - Clientes (cod 504): ~R$832–959 mil — duplicatas a receber
+#   - Títulos a Receber (cod 3719): R$1.265.564,13 — Conta Corrente Sul Minas
+#   - Adiantamentos de Clientes (cod 554): R$1.671.357,22 — passivo relevante
+#   - Depósitos Judiciais ANC (cod 82): R$363.733–363.789
+#
+# ALERTA — Sem receita operacional identificada:
+#   Nos 4 meses lidos (dez/2025 a mar/2026), NÃO há conta de receita
+#   de transporte/prestação de serviços com movimentação no balancete.
+#   A única receita registrada é financeira mínima (cod 430/431/434:
+#   "Descontos Financeiros Obtidos" = R$59,02).
+#   Resultado composto integralmente por despesas. Verificar com o
+#   escritório contábil se há conta de receita inativa ou se a
+#   empresa está sem atividade operacional no período.
+# ============================================================
+
+cliente: "FT Transporte Ltda"
+cnpj: "25.501.990/0001-72"
+layout: "fs_sequencial"
+consolidado: true
+empresas_consolidadas: [90, 154]
+
+# ------------------------------------------------------------
+# BALANÇO PATRIMONIAL
+#
+# Cada entrada em `codigos` é o CÓDIGO SINTÉTICO (grupo) que
+# agrega os analíticos filhos conforme a hierarquia do balancete.
+# O engine deve usar correspondência EXATA (não prefixo).
+# ------------------------------------------------------------
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      # 3 — Disponível  [grupo sintético]
+      #   4 — Caixa
+      #     5 — Caixa Geral
+      #   7 — Bancos Conta Movimento
+      #     3695 — Target
+      #     3909 — Banco Bradesco AG 5510 - CC 200154-3 (aparece a partir de jan/2026)
+      codigos: ["3"]
+
+    clientes:
+      # 12 — Clientes  [grupo sintético]
+      #   13 — Duplicatas a Receber
+      #     504 — Clientes Diversos
+      # Saldo: ~R$832–959 mil (reduz com recebimentos)
+      codigos: ["12"]
+
+    titulos_a_receber:
+      # 20 — Títulos a Receber  [grupo sintético]
+      #   3719 — Conta Corrente Sul Minas
+      # Saldo estável: R$1.265.564,13D
+      codigos: ["20"]
+
+    adiantamentos_a_empregados:
+      # 24 — Adiantamento a Empregados  [grupo sintético]
+      #   25 — Adiantamento de Salário (R$14.766,47D)
+      #   529 — Adiantamento de Férias (R$1.304,60D)
+      codigos: ["24"]
+
+    tributos_a_recuperar:
+      # 28 — Tributos a Recuperar/Compensar  [grupo sintético]
+      #   30 — ICMS a Recuperar
+      #   38 — INSS a Compensar
+      #   39 — Parcelamento Imposto a Compensar
+      #   40 — Cofins a Recuperar
+      #   41 — PIS a Recuperar
+      # Saldo expressivo: ~R$729–804 mil
+      codigos: ["28"]
+
+  ativo_nao_circulante:
+
+    depositos_judiciais:
+      # 69 — Ativo Realizável a Longo Prazo  [grupo sintético]
+      #   76 — Outros Créditos
+      #     82 — Depósitos Judiciais
+      # Saldo: ~R$363.733–363.789D
+      codigos: ["69"]
+
+    imobilizado:
+      # 120 — Veículos  [grupo sintético]
+      #   121 — Veículos (R$10.836.726,39D — frota bruta)
+      codigos: ["120"]
+
+    depreciacao_acumulada:
+      # 125 — (-) Depreciações, Amort. e Exaus. Acumul.  [grupo sintético]
+      #   129 — (-) Depreciações de Veículos (R$9.054.688,13C a R$9.247.993,43C)
+      # Sinal -1: saldo credor reduz o imobilizado
+      codigos: ["125"]
+      sinal: -1
+
+  passivo_circulante:
+
+    emprestimos_financiamentos:
+      # 382 — Empréstimos e Financiamentos  [grupo sintético]
+      #   154 — Financiamentos
+      #     2046 — (-) Juros a Apropriar (redutora do passivo)
+      #     3749 — Consórcio Caixa
+      #     3750 — Consórcio Volvo
+      #     3751 — Consórcio Ancora
+      #     3752 — Consórcio Randon
+      #     3753 — Safra Financeira
+      #     3754 — Banco Rodobens
+      #     3755 — Empréstimos Caixa
+      # Saldo estável: R$4.069.944,64C
+      codigos: ["382"]
+
+    fornecedores:
+      # 164 — Fornecedores  [grupo sintético]
+      #   165 — Fornecedores (dezenas de credores analíticos: 506 a ~3910)
+      # Saldo crescente: R$4.959.741 → R$4.998.854 → R$4.934.245 → R$4.861.839
+      # Inclui fornecedores de combustível, peças, pneus, manutenção, etc.
+      codigos: ["164"]
+
+    obrigacoes_tributarias:
+      # 169 — Obrigações Tributárias  [grupo sintético]
+      #   170 — Impostos e Contribuições a Recolher
+      #     178 — IRRF a Recolher
+      #     182 — CRF a Recolher
+      #     183 — ISS Retido a Recolher
+      #     508 — INSS Receita Bruta a Recolher
+      #     3553 — Parcelamento ICMS (R$2.721.683,42C — expressivo)
+      #     3742 — Parcelamento PGFN 3817734
+      #     3743 — Parcelamento PGFN 3817737
+      #     3601 — (-) Juros e Multas a Apropriar Parcelamentos (redutora, saldo D)
+      # Saldo total: ~R$3.263–3.284 mil
+      codigos: ["169"]
+
+    obrigacoes_pessoal:
+      # 186 — Obrigações com o Pessoal  [grupo sintético]
+      #   188 — Pró-labore a Pagar (R$34.681,13C)
+      #   525 — Autônomos a Pagar (R$28.796,12C — presente até fev/2026)
+      codigos: ["186"]
+
+    obrigacoes_sociais:
+      # 190 — Obrigações Sociais  [grupo sintético]
+      #   191 — INSS a Recolher (R$606–622 mil — expressivo)
+      #   192 — FGTS a Recolher (R$1.029,62C)
+      #   491 — Contribuição Sindical a Recolher (R$1.122,79C)
+      codigos: ["190"]
+
+    adiantamentos_de_clientes:
+      # 201 — Adiantamentos de Clientes  [grupo sintético]
+      #   554 — Adiantamento de Clientes (R$1.671.357,22C — estável)
+      codigos: ["201"]
+
+    contas_a_pagar:
+      # 202 — Contas a Pagar  [grupo sintético]
+      #   586 — Aluguéis a Pagar (R$380,00C → R$1.520,00C em mar/2026)
+      codigos: ["202"]
+
+  passivo_nao_circulante:
+
+    emprestimos_socios:
+      # 218 — Empréstimos e Financiamentos LP  [grupo sintético]
+      #   3906 — Empréstimo dos Sócios (R$139.018,00C — estável)
+      codigos: ["218"]
+
+  patrimonio_liquido:
+
+    capital_social:
+      # 243 — Capital Social  [grupo sintético]
+      #   244 — Capital Subscrito
+      #     245 — Capital Social (R$493.000,00C)
+      codigos: ["243"]
+
+    prejuizos_acumulados:
+      # 264 — Lucros ou Prejuízos Acumulados  [grupo sintético]
+      #   265 — Lucros ou Prejuízos Acumulados
+      #     267 — (-) Prejuízos Acumulados (~R$10,1–10,3M — saldo devedor)
+      #     519 — (-) Prejuízo do Período (acumula mensalmente — saldo credor
+      #            nesta conta pois é uma conta redutora do PL)
+      # Sinal -1: grupo com saldo devedor = patrimônio negativo
+      codigos: ["264"]
+      sinal: -1
+
+
+# ------------------------------------------------------------
+# ESTRUTURA DA DRE
+#
+# Para o DRE, os códigos dos grupos sintéticos funcionam como
+# prefixos porque os filhos NÃO compartilham os mesmos dígitos
+# iniciais. Ex: "296" (Despesas com Vendas) → filhos: 319, 320,
+# 322, 325 — nenhum começa com "296". Prefixo funciona aqui.
+#
+# ALERTA: Conta de receita operacional de transporte NÃO
+# identificada nos balancetes disponíveis (dez/2025–mar/2026).
+# A única receita registrada é financeira (cod 430: R$59,02).
+# Adicionar conta de receita principal quando identificada.
+#
+# Resultado acumulado mar/2026: R$150.857,25D (prejuízo)
+# Composto por:
+#   Despesas com Vendas (296): R$67.969,59D
+#   Despesas Admin (329): R$82.375,55D
+#   Custo Serviços (461): R$571,13D
+#   Receitas Financeiras (430): R$59,02C
+#
+# tipo:
+#   receita      → positivo, soma ao resultado
+#   deducao      → negativo, reduz receita bruta
+#   custo        → negativo, reduz resultado
+#   despesa      → negativo, reduz resultado
+#   outra_receita → receita fora da operação principal
+# ------------------------------------------------------------
+dre_estrutura:
+
+  custo_servicos_prestados:
+    label: "(-) Custo dos Serviços Prestados"
+    tipo: custo
+    prefixos:
+      - "461"    # 461 — Custos dos Produtos e Serviços Vendidos
+                 #   465 — Custos dos Serviços Prestados
+                 #     466 — Custos dos Serviços Prestados
+                 #       467 — Combustíveis e Lubrificantes
+                 # Saldo mar/2026: R$571,13D (baixo — verificar se há
+                 # custo de combustível sendo lançado em Fornecedores)
+
+  despesas_com_vendas:
+    label: "Despesas com Vendas"
+    tipo: despesa
+    prefixos:
+      - "296"    # 296 — Despesas com Vendas
+                 #   319 — Despesas Gerais
+                 #     320 — Aluguéis (R$4.500,00D em mar/2026)
+                 #     322 — Telefone (R$69,90D)
+                 #     325 — Serviços Prestados por Terceiros (R$63.399,69D)
+                 # Obs: "Serviços Prestados por Terceiros" aqui é expressivo
+                 # — provável custo de subcontratação de fretes
+
+  impostos_taxas:
+    label: "Impostos, Taxas e Contribuições"
+    tipo: despesa
+    prefixos:
+      - "345"    # 345 — Impostos, Taxas e Contribuições
+                 #   352 — Multas de Mora (R$3.581,67D em mar/2026)
+
+  despesas_gerais:
+    label: "Despesas Gerais e Administrativas"
+    tipo: despesa
+    prefixos:
+      - "353"    # 353 — Despesas Gerais (administrativas)
+                 #   354 — Energia Elétrica (R$52,16D)
+                 #   355 — Água e Esgoto (R$24,78D)
+                 #   362 — Serviços Prestados por Terceiros (R$900,00D)
+                 #   363 — Depreciações e Amortizações (R$76.276,61D — dominante)
+                 # Obs: depreciação em mar/2026 = R$76.276,61D por mês
+
+  despesas_financeiras:
+    label: "Despesas Financeiras"
+    tipo: despesa
+    prefixos:
+      - "367"    # 367 — Despesas Financeiras
+                 #   574 — Tarifas Bancárias
+
+  receitas_financeiras:
+    label: "Receitas Financeiras"
+    tipo: outra_receita
+    prefixos:
+      - "430"    # 430 — Receitas Financeiras
+                 #   431 — Juros e Descontos
+                 #     434 — Descontos Financeiros Obtidos (R$59,02C)

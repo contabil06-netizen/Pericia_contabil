@@ -1,0 +1,259 @@
+# ============================================================
+# MAPA DE CONTAS — SAGRADOS CORACOES INDUSTRIA COM. ALIMENTOS LTDA
+# CNPJ: 65.123.804/0001-23
+# Layout: CTC007 (sistema proprio, 9 colunas, codigo hierarquico)
+# Setor: Agroindustrial - Cafe (Matriz + Filial)
+# ============================================================
+
+cliente: "Sagrados Coracoes Industria Com. Alimentos Ltda"
+cnpj: "65.123.804/0001-23"
+layout: "ctc007"
+
+# ------------------------------------------------------------
+# BALANCO PATRIMONIAL
+# ------------------------------------------------------------
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      codigos: ["1.1.01"]
+
+    clientes:
+      codigos: ["1.1.02.01"]
+
+    adiantamentos_fornecedores:
+      codigos: ["1.1.02.02"]
+
+    adiantamentos_funcionarios:
+      codigos: ["1.1.02.03"]
+
+    outros_creditos_circulante:
+      codigos: ["1.1.02.04"]
+
+    estoques:
+      codigos: ["1.1.15"]
+
+    impostos_a_recuperar:
+      codigos: ["1.1.16"]
+
+    despesas_apropriar:
+      codigos: ["1.1.20"]
+
+  ativo_nao_circulante:
+
+    realizavel_longo_prazo:
+      codigos: ["1.2.01"]
+
+    outros_valores_receber_lp:
+      codigos: ["1.2.05"]
+
+    imobilizado:
+      codigos: ["1.2.03"]
+
+    intangivel:
+      codigos: ["1.2.04"]
+
+  passivo_circulante:
+
+    fornecedores:
+      codigos: ["2.1.01"]
+
+    emprestimos_financiamentos_cp:
+      codigos: ["2.1.02", "2.1.03"]
+
+    obrigacoes_pessoal:
+      codigos: ["2.1.05"]
+
+    obrigacoes_sociais:
+      codigos: ["2.1.06"]
+
+    tributos_recolher:
+      codigos: ["2.1.07"]
+
+    outras_contas_pagar:
+      codigos: ["2.1.08"]
+
+    provisoes:
+      codigos: ["2.1.09", "2.1.11"]
+
+  passivo_nao_circulante:
+
+    impostos_lp:
+      codigos: ["2.2.01"]
+
+    outros_lp:
+      codigos: ["2.2.02"]
+
+    emprestimos_financiamentos_lp:
+      codigos: ["2.2.10"]
+
+  patrimonio_liquido:
+
+    capital_social:
+      codigos: ["2.3.01"]
+
+    ajustes_avaliacao_patrimonial:
+      codigos: ["2.3.03"]
+
+    resultados_acumulados:
+      codigos: ["2.3.04"]
+      sinal: -1
+
+    quotas_tesouraria:
+      codigos: ["2.3.06"]
+      sinal: -1
+
+
+# ------------------------------------------------------------
+# ESTRUTURA DA DRE — FORMATO PADRAO 14 LINHAS
+#
+# Tipos simples:
+#   receita            -> sinal +  / acumula em acc["receita"]
+#   deducao            -> sinal -  / acumula em acc["deducao"]
+#   custo              -> sinal -  / acumula em acc["custo"]
+#   despesa            -> sinal -  / acumula em acc["despesa"]
+#   outra_receita      -> sinal +  / acumula em acc["outra_receita"]
+#   outra_despesa      -> sinal -  / acumula em acc["outra_despesa"]
+#   depreciacao        -> sinal +  / acumula em acc["depreciacao"]  (add-back EBITDA)
+#   receita_financeira -> sinal +  / acumula em acc["receita_financeira"]
+#   despesa_financeira -> sinal -  / acumula em acc["despesa_financeira"]
+#   provisao_ir        -> sinal -  / acumula em acc["provisao_ir"]
+#
+# Tipo agrupador:
+#   agrupador -> cabecalho pai + subgrupos aninhados
+#
+# Tipo subtotal:
+#   subtotal + formula -> linha calculada usando acumuladores
+# ------------------------------------------------------------
+dre_estrutura:
+
+  receita_bruta:
+    label: "01. Receita Bruta de Vendas"
+    tipo: receita
+    prefixos:
+      - "3.1.01.01"   # Receita de Vendas de Cafe - Mercado
+
+  deducoes:
+    label: "02. (-) Deducoes da Receita Bruta"
+    tipo: deducao
+    prefixos:
+      - "3.1.01.03"   # Tributos s/ Vendas (ICMS)
+
+  rec_op_liq:
+    label: "03. Receita Operacional Liquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  custos_operacionais:
+    label: "04. (-) Custos Operacionais"
+    tipo: agrupador
+    subgrupos:
+      custo_cafe_vendido:
+        label: "    Custo do Cafe Vendido (CMV)"
+        tipo: custo
+        sinal_acc: -1     # Conta CREDOR com saldo devedor (3.x contra-receita): _mov < 0, inverter para formula
+        prefixos:
+          - "3.1.01.04"   # (-) Custo do Cafe Vendido - Mercado (5 segmentos: 3.1.01.04.001)
+      custos_producao:
+        label: "    Custos Gerais de Producao"
+        tipo: custo
+        prefixos:
+          - "4.8.12"      # Custos Gerais de Producao
+        excluir_prefixos:
+          - "4.8.12.01.024"   # Depreciacao Producao — exibida somente no item 09
+
+  lucro_bruto:
+    label: "05. Lucro (Prejuizo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
+
+  despesas_operacionais:
+    label: "06. (-) Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      trabalhistas:
+        label: "    06.1 Trabalhistas"
+        tipo: despesa
+        prefixos:
+          - "4.1.01"      # Salarios, INSS, FGTS, Ferias, Pro-labore, etc.
+      gerais_adm:
+        label: "    06.2 Gerais e Administrativas"
+        tipo: despesa
+        prefixos:
+          - "4.1.02"      # Despesas Gerais (Deprec., Amort., Material, Viagens, etc.)
+          - "4.1.03"      # Utilidades (Telefone, Informatica, Seguros)
+          - "4.1.04"      # Despesas Eventuais
+          - "4.1.05"      # Servicos de Terceiros
+          - "4.1.06"      # Fretes e Carretos
+          - "4.1.07"      # Manutencao
+          - "4.1.08"      # Corretagens
+          - "4.1.09"      # Combustiveis
+      tributarias:
+        label: "    06.3 Tributarias"
+        tipo: despesa
+        prefixos:
+          - "4.1.11"      # Despesas Tributarias (PIS, COFINS, ICMS, ISS)
+
+  outras_rec_desp:
+    label: "07. Outras Receitas/Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      outras_receitas:
+        label: "    Outras Receitas Operacionais"
+        tipo: outra_receita
+        prefixos:
+          - "3.5.01"      # Alugueis
+      outras_despesas:
+        label: "    Outras Despesas"
+        tipo: outra_despesa
+        prefixos:
+          - "4.5.01"      # Perdas Diversas
+
+  resultado_op:
+    label: "08. Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa + outra_receita - outra_despesa"
+
+  depreciacao:
+    label: "09. (+) Depreciacao e Amortizacao"
+    tipo: depreciacao
+    prefixos:
+      - "4.1.02.01.024"   # Depreciacao (Despesas Gerais)
+      - "4.1.02.01.038"   # Amortizacao (Despesas Gerais)
+      - "4.8.12.01.024"   # Depreciacao (Custos Producao)
+
+  ebitda:
+    label: "10. EBITDA"
+    tipo: subtotal
+    formula: "resultado_op + depreciacao"
+
+  rec_desp_fin:
+    label: "11. Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+      receitas_fin:
+        label: "    Receitas Financeiras"
+        tipo: receita_financeira
+        prefixos:
+          - "3.4.01"      # Descontos Obtidos, Outras Rec. Financeiras, Var. Monetaria
+      despesas_fin:
+        label: "    Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "3.4.02"      # Juros, IOF, Descontos Concedidos, Multas Tributarias
+
+  lucro_antes_ir:
+    label: "12. Lucro (Prejuizo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "resultado_op + receita_financeira - despesa_financeira"
+
+  provisao_ir:
+    label: "13. (-) Provisao para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []    # Preencher quando houver conta especifica de provisao IR
+
+  lucro_liq:
+    label: "14. Lucro (Prejuizo) Liquido do Periodo"
+    tipo: subtotal
+    formula: "resultado_op + receita_financeira - despesa_financeira - provisao_ir"
