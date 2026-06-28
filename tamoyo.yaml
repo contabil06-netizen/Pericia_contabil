@@ -1,0 +1,305 @@
+# ============================================================
+# MAPA DE CONTAS - FRIGORIFICO TAMOYO LTDA
+# CNPJ: 20.395.778/0001-54
+# Layout: Socium (codigo hierarquico 5 niveis)
+# Gerado com base nos balancetes 12/2025, 01/2026, 02/2026,
+#   03/2026 e 04/2026
+# Verificado contra PDFs originais em 06/2026
+# Setor: Frigorifico / Agroindustrial - Recuperacao Judicial
+# Observacao: empresa com atividade reduzida (sem clientes a receber);
+#   receitas por prestacao de servicos e arrendamento; passivo fortemente
+#   composto por obrigacoes em recuperacao judicial.
+#   Estoque (1.1.5) aparece em 02/2026 com saldo zero - mapeado por precaucao.
+#   Receitas Financeiras (4.1.3) e Custo de Produtos (5.1.1) aparecem
+#   pontualmente em 02/2026 com saldos imateriais.
+# ============================================================
+
+cliente: "Frigorifico Tamoyo Ltda"
+cnpj: "20.395.778/0001-54"
+layout: "socium"
+
+# ------------------------------------------------------------
+# BALANCO PATRIMONIAL
+# ------------------------------------------------------------
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      # 1.1.1.01.001 - Caixa Geral
+      # 1.1.1.01.002 - Caixa Diversos
+      # 1.1.1.01.003 - Caixa Sarti Mineracao
+      codigos: ["1.1.1"]
+
+    estoques:
+      # 1.1.5.01.000 - Materia-Prima (saldo zero em 02/2026)
+      codigos: ["1.1.5"]
+
+    outros_creditos:
+      # 1.1.3.05 - Adiantamentos a Fornecedores
+      # 1.1.3.06 - Adiantamento a Empregados
+      # 1.1.3.08 - Tributos a Recuperar/Compensar
+      codigos: ["1.1.3"]
+
+    contas_compensacao_ativo:
+      # 1.4.1.01.001 - Entradas para Industrializacao
+      # 1.4.1.01.003 - Remessa p/ Conserto
+      # 1.4.1.01.005 - Entrada p/Ind. s/Transito
+      codigos: ["1.4"]
+
+  ativo_nao_circulante:
+
+    realizavel_longo_prazo:
+      # 1.2.1.03.000 - Depositos Judiciais Trabalhistas
+      codigos: ["1.2.1"]
+
+    investimentos:
+      # 1.2.3.01.000 - Investimento em Acoes
+      codigos: ["1.2.3"]
+
+    imobilizado:
+      # 1.2.4.01.000 - Terrenos
+      # 1.2.4.02.000 - Moveis e Utensilios
+      # 1.2.4.03.000 - Maquinas e Equipamentos
+      # 1.2.4.07.000 - (-) Depreciacoes Acumuladas (3 grupos)
+      # 1.2.4.08.000 - Outros Imobilizados
+      codigos: ["1.2.4"]
+
+    intangivel:
+      # 1.2.5.02.000 - Pesq. Minerais, Cultura de Eucalipto
+      codigos: ["1.2.5"]
+
+  passivo_circulante:
+
+    emprestimos_financiamentos:
+      # 2.1.1.01.000 - Emprestimos a Terceiros
+      codigos: ["2.1.1"]
+
+    fornecedores:
+      # 2.1.3.01 - Fornecedores (diversas empresas)
+      codigos: ["2.1.3"]
+
+    obrigacoes_tributarias:
+      # 2.1.4.01.000-.003 - ICMS, ISS, IRPJ, CSLL, IRRF, PIS, COFINS,
+      #   CRF, DIFAL, INSS Rec. Bruta, PIS/COFINS/CSLL Retidos, CFEM
+      codigos: ["2.1.4"]
+
+    obrigacoes_trabalhistas:
+      # 2.1.5.01.000 - Salarios e Ordenados a Pagar
+      # 2.1.5.02.000 - INSS, FGTS, Contrib. Sindical, Contrib. Previd.
+      codigos: ["2.1.5"]
+
+    outras_obrigacoes:
+      # 2.1.6.02.000 - Contas a Pagar diversas
+      # 2.1.6.06.001-.007 - Multas, Parcelamentos RJ
+      codigos: ["2.1.6"]
+
+  passivo_nao_circulante:
+
+    emprestimos_financiamentos_lp:
+      # 2.2.1.01.001 - Emprestimo Banco CDMG / Adolfo Henrique S. Franco
+      codigos: ["2.2.1.01"]
+
+    impostos_parcelados_rj:
+      # 2.2.1.05.001-.010 - Parcelamentos ICMS, Divida Ativa, COFINS, PIS
+      codigos: ["2.2.1.05"]
+
+    trabalhistas_parcelados_rj:
+      # 2.2.1.06.001-.004 - Parcelamentos INSS, FGTS, CLT, IRRF
+      codigos: ["2.2.1.06"]
+
+  patrimonio_liquido:
+
+    capital_social:
+      # 2.3.1.01.000 - Capital Social (2 socios)
+      codigos: ["2.3.1"]
+
+    reserva_reavaliacao:
+      # 2.3.3.02 - Reavaliacao de Ativos Proprios
+      codigos: ["2.3.3"]
+
+    reservas_lucros:
+      # 2.3.4.06 - Reserva Legal
+      # 2.3.5.01.000 - Lucros Acumulados
+      codigos: ["2.3.4", "2.3.5"]
+
+    prejuizos_acumulados:
+      # 2.3.6.01.001 - (-) Prejuizos Acumulados
+      # 2.3.6.01.002 - (-) Prejuizo do Periodo (pode ser credor = lucro parcial)
+      codigos: ["2.3.6"]
+      sinal: -1
+
+    ajustes_exercicios:
+      # 2.3.8.01.000 - Ajustes de Exercicios Ant. Ref. a Desoneracao
+      codigos: ["2.3.8"]
+
+  resultado_exercicios_futuros:
+
+    compensacao_passivo:
+      # 2.5.0.01.001/003/005 - Retorno remessas (contrapartida de 1.4)
+      codigos: ["2.4", "2.5"]
+
+
+# ------------------------------------------------------------
+# ESTRUTURA DA DRE — espelha modelo preta e branca (linhas 01-14)
+#
+# Tipos utilizados:
+#   receita            → receitas operacionais (sinal +1)
+#   deducao            → deduções da receita (sinal -1)
+#   custo              → CPV (sinal -1)
+#   despesa            → despesas operacionais s/ tributárias (sinal -1)
+#   tributaria         → despesas tributárias (sinal -1) — excluídas do EBITDA
+#   outra_receita      → receitas não-operacionais (sinal +1)
+#   outra_despesa      → outras despesas não-operacionais (sinal -1)
+#   depreciacao        → addback de depreciação para EBITDA (sinal +1)
+#   receita_financeira → receitas financeiras (sinal +1)
+#   despesa_financeira → despesas financeiras (sinal -1)
+#   provisao_ir        → IRPJ e CSLL (sinal -1)
+#   subtotal           → linha calculada via formula
+#   agrupador          → linha-mãe com subgrupos exibidos abaixo
+#
+# Nota sobre depreciação:
+#   3.2.2.04.001 entra em "adm_gerais" (tipo despesa) E em
+#   "depreciacao_amortizacao" (tipo depreciacao). Isso é correto:
+#   a depreciação é debitada como despesa no resultado operacional
+#   e adicionada de volta na linha 09 para chegar ao EBITDA.
+# ------------------------------------------------------------
+dre_estrutura:
+
+  # ── 01. Receita Bruta ────────────────────────────────────
+  receita_bruta:
+    label: "Receita Bruta"
+    tipo: agrupador
+    subgrupos:
+      receita_vendas:
+        label: "Receita de Vendas"
+        tipo: receita
+        prefixos:
+          - "4.1.1.01"   # (sem movimentação identificada no período)
+      receita_servicos:
+        label: "Receita de Serviços"
+        tipo: receita
+        prefixos:
+          - "4.1.1.02"   # 4.1.1.02.000 - Serviços Prestados
+
+  # ── 02. Deduções da Receita Bruta ────────────────────────
+  deducoes_receita:
+    label: "(-) Deduções da Receita Bruta"
+    tipo: deducao
+    prefixos:
+      - "4.1.2"          # 4.1.2.03.000 - (-) ICMS
+
+  # ── 03. Receita Operacional Líquida ──────────────────────
+  receita_operacional_liquida:
+    label: "Receita Operacional Líquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  # ── 04. Custo Operacional ─────────────────────────────────
+  custo_operacional:
+    label: "Custo Operacional"
+    tipo: agrupador
+    subgrupos:
+      cpv:
+        label: "Custos dos Produtos Vendidos"
+        tipo: custo
+        prefixos:
+          - "5.1.1"      # 5.1.1.01.000 - Custos dos Produtos Vendidos
+
+  # ── 05. Lucro (Prejuízo) Bruto ───────────────────────────
+  lucro_bruto:
+    label: "Lucro (Prejuízo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
+
+  # ── 06. Despesas Operacionais ────────────────────────────
+  despesas_operacionais:
+    label: "Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      trabalhistas:
+        label: "Trabalhistas"
+        tipo: despesa
+        prefixos:
+          - "3.2.2.01"   # Salários, Férias, INSS, FGTS, VT, VA, Faltas
+      adm_gerais:
+        label: "Administrativas e Gerais"
+        tipo: despesa
+        prefixos:
+          - "3.2.2.04"   # Energia, Deprec./Amort., Associação, Manutenção
+          - "3.2.2.05"   # Telefone, Internet
+          - "3.2.2.06"   # Contabilidade, Advogados, Terceiros, Engenharia
+      tributarias:
+        label: "Tributárias"
+        tipo: tributaria
+        prefixos:
+          - "3.2.2.03"   # Taxas Diversas, Multas de Mora, IMA (ABATE)
+
+  # ── 07. Outras Receitas (Despesas) Operacionais ──────────
+  outras_receitas_despesas:
+    label: "Outras Receitas (Despesas) Operacionais"
+    tipo: agrupador
+    subgrupos:
+      outras_receitas:
+        label: "Outras Receitas"
+        tipo: outra_receita
+        prefixos:
+          - "4.1.4"      # 4.1.4.00.001 - Recuperação de Despesa
+          - "4.1.5"      # 4.1.5.01.000 - Arrendamentos
+      outras_despesas:
+        label: "Outras Despesas"
+        tipo: outra_despesa
+        prefixos: []     # sem movimentação identificada
+
+  # ── 08. Resultado Operacional ────────────────────────────
+  resultado_operacional:
+    label: "Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
+
+  # ── 09. Depreciação / Amortização (addback p/ EBITDA) ────
+  depreciacao_amortizacao:
+    label: "Depreciação / Amortização"
+    tipo: depreciacao
+    prefixos:
+      - "3.2.2.04.001"   # Depreciações e Amortizações (incluída em adm_gerais acima)
+
+  # ── 10. EBITDA ───────────────────────────────────────────
+  ebitda:
+    label: "EBITDA"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa + outra_receita - outra_despesa + depreciacao"
+
+  # ── 11. Receitas (Despesas) Financeiras ──────────────────
+  financeiras:
+    label: "Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+      receitas_financeiras:
+        label: "Receitas Financeiras"
+        tipo: receita_financeira
+        prefixos:
+          - "4.1.3"      # 4.1.3.01.000 - Descontos Financeiros Obtidos
+      despesas_financeiras:
+        label: "Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "3.2.2.08"   # 3.2.2.08.009 - Juros s/ Impostos
+
+  # ── 12. Lucro (Prejuízo) Antes do IRPJ e CSLL ───────────
+  antes_irpj:
+    label: "Lucro (Prejuízo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira"
+
+  # ── 13. Provisão para IRPJ e CSLL ────────────────────────
+  provisao_irpj:
+    label: "Provisão para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []           # não identificado nos balancetes do período
+
+  # ── 14. Lucro (Prejuízo) Líquido do Período ──────────────
+  lucro_liquido:
+    label: "Lucro (Prejuízo) Líquido do Período"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira - provisao_ir"
