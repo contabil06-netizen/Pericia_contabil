@@ -102,8 +102,9 @@ Os clientes em Recuperação Judicial entregam balancetes mensais **sem encerram
  = Receita Líquida
 (−) Custo dos Produtos Vendidos / Custo dos Serviços Prestados (CPV / CSP)
  = Lucro Bruto
-(−) Despesas com Vendas
+(−) Despesas Trabalhistas
 (−) Despesas Gerais e Administrativas
+(-) Despesas Tributárias
 (−) Depreciação e Amortização (quando não alocada ao CPV)
  = Resultado Operacional (EBIT)
 (+) Receitas Financeiras

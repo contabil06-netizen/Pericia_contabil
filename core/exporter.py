@@ -165,13 +165,13 @@ def _acc_estrutura(estrutura: list, rel, acc: dict) -> None:
                 acc[chave] = val
         elif tipo == "agrupador":
             for sub in grupo.get("subgrupos", {}).values():
-                mov = _somar_mov_grupo(rel.balancete.contas_analiticas,
+                mov = _somar_mov_grupo(_pool_dre(rel),
                                        sub.get("prefixos", []))
                 # sinal_acc: -1 para contas CREDOR com movimento devedor (ex: CMV em 3.x)
                 sinal = Decimal(str(sub.get("sinal_acc", 1)))
                 acc[sub.get("tipo", "despesa")] += sinal * mov
         else:
-            mov = _somar_mov_grupo(rel.balancete.contas_analiticas,
+            mov = _somar_mov_grupo(_pool_dre(rel),
                                    grupo.get("prefixos", []))
             sinal = Decimal(str(grupo.get("sinal_acc", 1)))
             acc[tipo] += sinal * mov
@@ -215,6 +215,16 @@ def _somar_mov_grupo(contas, prefixos: list, excluir: list | None = None) -> Dec
                 total += _mov(c)
                 break
     return total
+
+
+def _pool_dre(rel) -> list:
+    # ContaCerta usa IDs sequenciais: pai [2884] e filhos [2898],[5694] não
+    # compartilham prefixo, então startswith age como match exato — sem double-counting.
+    # Contas folha classificadas como SINTETICA (ex: [2037] "Receitas Diversas")
+    # ficam fora de contas_analiticas; pesquisar em contas resolve o problema.
+    if rel and rel.balancete.layout_detectado == "contacerta":
+        return rel.balancete.contas
+    return rel.balancete.contas_analiticas
 
 
 def _contas_do_grupo(todas, prefixos, excluir=None):
@@ -360,11 +370,11 @@ def _processar_bloco_dre(ws, row, grupo, rel, rel_ant, idx_ant,
             sub_excl  = sub.get("excluir_prefixos", [])
             sinal_s   = _sinal_display(sub_tipo)
             sinal_acc = Decimal(str(sub.get("sinal_acc", 1)))
-            mov = _somar_mov_grupo(rel.balancete.contas_analiticas, sub_pref, sub_excl)
+            mov = _somar_mov_grupo(_pool_dre(rel), sub_pref, sub_excl)
             total_a_d += sinal_s * mov
             acc[sub_tipo] += sinal_acc * mov   # sinal_acc corrige CREDOR com mov devedor
             if com and rel_ant:
-                mov_b = _somar_mov_grupo(rel_ant.balancete.contas_analiticas, sub_pref, sub_excl)
+                mov_b = _somar_mov_grupo(_pool_dre(rel_ant), sub_pref, sub_excl)
                 total_b_d += sinal_s * mov_b
                 acc_ant[sub_tipo] += sinal_acc * mov_b
 
@@ -379,12 +389,12 @@ def _processar_bloco_dre(ws, row, grupo, rel, rel_ant, idx_ant,
             sub_excl  = sub.get("excluir_prefixos", [])
             sub_label = sub.get("label", "")
             sinal_s   = _sinal_display(sub_tipo)
-            sub_mov   = _somar_mov_grupo(rel.balancete.contas_analiticas, sub_pref, sub_excl)
+            sub_mov   = _somar_mov_grupo(_pool_dre(rel), sub_pref, sub_excl)
             sv_a = float(sinal_s * sub_mov)
             sv_b = None
             if com and rel_ant:
                 sv_b = float(sinal_s * _somar_mov_grupo(
-                    rel_ant.balancete.contas_analiticas, sub_pref, sub_excl))
+                    _pool_dre(rel_ant), sub_pref, sub_excl))
 
             row = _linha_dre_subgrupo(ws, row, sub_label, sv_a, sv_b,
                                        base_a, base_b, com)
@@ -405,12 +415,12 @@ def _processar_bloco_dre(ws, row, grupo, rel, rel_ant, idx_ant,
     else:
         prefixos = grupo.get("prefixos", [])
         sinal    = _sinal_display(tipo)
-        mov      = _somar_mov_grupo(rel.balancete.contas_analiticas, prefixos)
+        mov      = _somar_mov_grupo(_pool_dre(rel), prefixos)
         val_a    = float(sinal * mov)
         acc[tipo] += mov
         val_b = None
         if com and rel_ant:
-            mov_b = _somar_mov_grupo(rel_ant.balancete.contas_analiticas, prefixos)
+            mov_b = _somar_mov_grupo(_pool_dre(rel_ant), prefixos)
             val_b = float(sinal * mov_b)
             acc_ant[tipo] += mov_b
 
@@ -571,12 +581,255 @@ def _dre_fallback(ws, row, rel, idx_ant, com, base_a, base_b):
 
 
 # ---------------------------------------------------------------------------
-# ABA: Balanço Patrimonial
+# ABA: Balanço Patrimonial — YAML-driven (ContaCerta e layouts sem hierarquia 1.x/2.x)
+# ---------------------------------------------------------------------------
+
+# Ordem canônica das seções do BP e seus títulos de exibição
+_SECOES_BP_YAML = [
+    ("ativo_circulante",       "ATIVO CIRCULANTE"),
+    ("ativo_nao_circulante",   "ATIVO NÃO CIRCULANTE"),
+    ("passivo_circulante",     "PASSIVO CIRCULANTE"),
+    ("passivo_nao_circulante", "PASSIVO NÃO CIRCULANTE"),
+    ("patrimonio_liquido",     "PATRIMÔNIO LÍQUIDO"),
+]
+
+
+def _display_grupo_bp(grupo, secao: str) -> float:
+    """
+    Converte o valor interno do mapper para valor de exibição no BP.
+
+    Convenção do mapper: DEVEDOR → +saldo, CREDOR → -saldo.
+    - Ativo: +D = ativo normal, -C = saldo credor (cheque especial etc.) → usar como está.
+    - Passivo/PL normais (sinal=1): CREDOR → mapper gerou -saldo → inverter para exibição positiva.
+    - Passivo/PL redutores (sinal=-1, ex: Prejuízo): valor já negativo por design → manter negativo.
+    """
+    val = float(grupo.valor)
+    if secao.startswith("ativo"):
+        return val
+    # passivo / patrimônio_liquido
+    if grupo.sinal == -1:
+        return val   # conta redutora do PL: já é negativo, manter
+    return -val      # inversão: CREDOR foi negado pelo mapper, desfazer para exibição
+
+
+def _construir_bp_yaml(wb, rel: RelatorioFinal,
+                       rel_ant: Optional[RelatorioFinal],
+                       resultado_periodo: Decimal):
+    """
+    Renderiza o Balanço Patrimonial a partir de rel.grupos_balanco (mapeamento YAML).
+    Usado para layouts cujos códigos não seguem a convenção hierárquica 1.x/2.x (ex: ContaCerta).
+    """
+    ws  = wb.create_sheet("Balanço Patrimonial")
+    b   = rel.balancete
+    com = rel_ant is not None
+    resultado_anterior = _apurar_resultado(rel_ant) if com else None
+    eh_prej     = resultado_periodo < Decimal("0")
+    eh_prej_ant = (resultado_anterior < Decimal("0")) if resultado_anterior is not None else False
+
+    # Totais para base do AV%
+    total_ativo_a = sum(
+        abs(_display_grupo_bp(g, k.split(".")[0]))
+        for k, g in rel.grupos_balanco.items()
+        if k.split(".")[0].startswith("ativo")
+    ) or 1.0
+    total_passpl_a = sum(
+        abs(_display_grupo_bp(g, k.split(".")[0]))
+        for k, g in rel.grupos_balanco.items()
+        if not k.split(".")[0].startswith("ativo")
+    ) or 1.0
+    total_ativo_a  += abs(float(resultado_periodo)) if not eh_prej else 0
+    total_passpl_a += abs(float(resultado_periodo))
+
+    if com and rel_ant.grupos_balanco:
+        total_ativo_b = sum(
+            abs(_display_grupo_bp(g, k.split(".")[0]))
+            for k, g in rel_ant.grupos_balanco.items()
+            if k.split(".")[0].startswith("ativo")
+        ) or 1.0
+        total_passpl_b = sum(
+            abs(_display_grupo_bp(g, k.split(".")[0]))
+            for k, g in rel_ant.grupos_balanco.items()
+            if not k.split(".")[0].startswith("ativo")
+        ) or 1.0
+        if resultado_anterior is not None:
+            total_passpl_b += abs(float(resultado_anterior))
+    else:
+        total_ativo_b = total_passpl_b = 1.0
+
+    # Título
+    n_cols = 8 if com else 5
+    ws.merge_cells(f"A1:{get_column_letter(n_cols)}1")
+    _cel(ws["A1"],
+         f"BALANÇO PATRIMONIAL  —  {b.empresa}   |   CNPJ: {b.cnpj}",
+         bold=True, bg=COR_TITULO_BG, fg=COR_TITULO_FG, halign="center", size=11)
+    ws.row_dimensions[1].height = 28
+
+    # Cabeçalho colunas
+    if com:
+        hdrs = ["Conta", "Descrição",
+                f"Saldo {rel_ant.balancete.periodo_fim}", "AV%",
+                f"Saldo {b.periodo_fim}", "AV%",
+                "Var. R$", "Var. %"]
+    else:
+        hdrs = ["Conta", "Descrição", f"Saldo {b.periodo_fim}", "AV%", "Var. %"]
+
+    for col, h in enumerate(hdrs, 1):
+        c = ws.cell(row=2, column=col, value=h)
+        c.font      = Font(bold=True, color=COR_TITULO_FG, name="Arial", size=10)
+        c.fill      = PatternFill("solid", fgColor=COR_TITULO_BG)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[2].height = 18
+
+    row = 3
+
+    for secao_key, secao_label in _SECOES_BP_YAML:
+        grupos_secao = {
+            k: g for k, g in rel.grupos_balanco.items()
+            if k.startswith(secao_key + ".")
+        }
+        if not grupos_secao:
+            continue
+
+        base_a = total_ativo_a if secao_key.startswith("ativo") else total_passpl_a
+        base_b = (total_ativo_b if secao_key.startswith("ativo") else total_passpl_b) if com else None
+
+        # Cabeçalho da seção
+        ws.merge_cells(f"A{row}:{get_column_letter(n_cols)}{row}")
+        c = ws.cell(row=row, column=1, value=secao_label)
+        c.font      = Font(bold=True, name="Arial", size=10, color=COR_TITULO_FG)
+        c.fill      = PatternFill("solid", fgColor=COR_TITULO_BG)
+        c.alignment = Alignment(vertical="center")
+        ws.row_dimensions[row].height = 16
+        row += 1
+
+        total_secao_a: float = 0.0
+        total_secao_b = None
+
+        # Resultado do Período — inserido no início do PL
+        if secao_key == "patrimonio_liquido":
+            bg_res     = COR_PREJUIZO_BG if eh_prej     else COR_RESULTADO_BG
+            bg_res_ant = COR_PREJUIZO_BG if eh_prej_ant else COR_RESULTADO_BG
+            label_res  = "(-) Resultado do Período (Prejuízo)" if eh_prej else "Resultado do Período"
+            val_res_a  = float(resultado_periodo)
+            val_res_b  = float(resultado_anterior) if resultado_anterior is not None else None
+
+            ws.cell(row=row, column=1, value="RESULT.")
+            cd = ws.cell(row=row, column=2, value=label_res)
+            cd.alignment = Alignment(indent=1)
+            if com:
+                _val_cel(ws, row, 3, val_res_b, bold=True, bg=bg_res_ant)
+                _val_cel(ws, row, 4, _av(val_res_b, base_b), fmt=FMT_PERCENT, bold=True, bg=bg_res_ant)
+                _val_cel(ws, row, 5, val_res_a, bold=True, bg=bg_res)
+                _val_cel(ws, row, 6, _av(val_res_a, base_a), fmt=FMT_PERCENT, bold=True, bg=bg_res)
+                _val_cel(ws, row, 7, _var_r(val_res_a, val_res_b), bold=True, bg=bg_res)
+                _val_cel(ws, row, 8, _var_p(val_res_a, val_res_b), fmt=FMT_PERCENT, bold=True, bg=bg_res)
+            else:
+                _val_cel(ws, row, 3, val_res_a, bold=True, bg=bg_res)
+                _val_cel(ws, row, 4, _av(val_res_a, base_a), fmt=FMT_PERCENT, bold=True, bg=bg_res)
+            for col in [1, 2]:
+                c = ws.cell(row=row, column=col)
+                c.font      = Font(bold=True, name="Arial", size=10, color=COR_TITULO_BG)
+                c.fill      = PatternFill("solid", fgColor=bg_res)
+                c.alignment = Alignment(vertical="center")
+            row += 1
+
+            total_secao_a += val_res_a
+            if com and val_res_b is not None:
+                total_secao_b = (total_secao_b or 0.0) + val_res_b
+
+        # Grupos da seção
+        for chave, grupo in grupos_secao.items():
+            val_a = _display_grupo_bp(grupo, secao_key)
+            val_b = None
+            if com and rel_ant.grupos_balanco:
+                grupo_ant = rel_ant.grupos_balanco.get(chave)
+                if grupo_ant:
+                    val_b = _display_grupo_bp(grupo_ant, secao_key)
+
+            bg = COR_LINHA_PAR if row % 2 == 0 else "FFFFFF"
+            ws.cell(row=row, column=1, value="")
+            cd = ws.cell(row=row, column=2, value=grupo.label or grupo.nome)
+            cd.font      = Font(name="Arial", size=10)
+            cd.alignment = Alignment(indent=1)
+
+            if com:
+                _val_cel(ws, row, 3, val_b, bg=bg if bg != "FFFFFF" else None)
+                _val_cel(ws, row, 4, _av(val_b, base_b), fmt=FMT_PERCENT,
+                         bg=bg if bg != "FFFFFF" else None)
+                _val_cel(ws, row, 5, val_a, bg=bg if bg != "FFFFFF" else None)
+                _val_cel(ws, row, 6, _av(val_a, base_a), fmt=FMT_PERCENT,
+                         bg=bg if bg != "FFFFFF" else None)
+                _val_cel(ws, row, 7, _var_r(val_a, val_b),
+                         bg=bg if bg != "FFFFFF" else None)
+                _val_cel(ws, row, 8, _var_p(val_a, val_b), fmt=FMT_PERCENT,
+                         bg=bg if bg != "FFFFFF" else None)
+            else:
+                _val_cel(ws, row, 3, val_a, bg=bg if bg != "FFFFFF" else None)
+                _val_cel(ws, row, 4, _av(val_a, base_a), fmt=FMT_PERCENT,
+                         bg=bg if bg != "FFFFFF" else None)
+
+            if bg != "FFFFFF":
+                for col in [1, 2]:
+                    ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor=bg)
+            for col in [1, 2]:
+                ws.cell(row=row, column=col).font = Font(name="Arial", size=10)
+
+            total_secao_a += val_a
+            if com and val_b is not None:
+                total_secao_b = (total_secao_b or 0.0) + val_b
+            row += 1
+
+        # Subtotal da seção
+        ws.merge_cells(f"A{row}:B{row}")
+        c = ws.cell(row=row, column=1, value=f"TOTAL {secao_label}")
+        c.font      = Font(bold=True, name="Arial", size=10)
+        c.fill      = PatternFill("solid", fgColor=COR_SUBTOTAL_BG)
+        c.alignment = Alignment(vertical="center")
+        if com:
+            _val_cel(ws, row, 3, total_secao_b, bold=True, bg=COR_SUBTOTAL_BG)
+            _val_cel(ws, row, 4, _av(total_secao_b, base_b), fmt=FMT_PERCENT,
+                     bold=True, bg=COR_SUBTOTAL_BG)
+            _val_cel(ws, row, 5, total_secao_a, bold=True, bg=COR_SUBTOTAL_BG)
+            _val_cel(ws, row, 6, _av(total_secao_a, base_a), fmt=FMT_PERCENT,
+                     bold=True, bg=COR_SUBTOTAL_BG)
+            _val_cel(ws, row, 7, _var_r(total_secao_a, total_secao_b),
+                     bold=True, bg=COR_SUBTOTAL_BG)
+            _val_cel(ws, row, 8, _var_p(total_secao_a, total_secao_b), fmt=FMT_PERCENT,
+                     bold=True, bg=COR_SUBTOTAL_BG)
+        else:
+            _val_cel(ws, row, 3, total_secao_a, bold=True, bg=COR_SUBTOTAL_BG)
+            _val_cel(ws, row, 4, _av(total_secao_a, base_a), fmt=FMT_PERCENT,
+                     bold=True, bg=COR_SUBTOTAL_BG)
+        row += 1
+
+    # Dimensões
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 42
+    ws.column_dimensions["C"].width = 18
+    ws.column_dimensions["D"].width = 8
+    if com:
+        ws.column_dimensions["E"].width = 18
+        ws.column_dimensions["F"].width = 8
+        ws.column_dimensions["G"].width = 16
+        ws.column_dimensions["H"].width = 10
+    else:
+        ws.column_dimensions["E"].width = 10
+    ws.freeze_panes = "A3"
+
+
+# ---------------------------------------------------------------------------
+# ABA: Balanço Patrimonial — legado (Socium e layouts com hierarquia 1.x/2.x)
 # ---------------------------------------------------------------------------
 
 def _construir_bp(wb, rel: RelatorioFinal,
                   rel_ant: Optional[RelatorioFinal],
                   resultado_periodo: Decimal):
+    # Layouts sem hierarquia numérica 1.x/2.x usam o BP guiado pelo YAML (grupos_balanco).
+    # Layouts hierárquicos (Socium) continuam usando o renderer legado por prefixo.
+    if rel.grupos_balanco and rel.balancete.layout_detectado == "contacerta":
+        _construir_bp_yaml(wb, rel, rel_ant, resultado_periodo)
+        return
+
     ws  = wb.create_sheet("Balanço Patrimonial")
     b   = rel.balancete
     com = rel_ant is not None

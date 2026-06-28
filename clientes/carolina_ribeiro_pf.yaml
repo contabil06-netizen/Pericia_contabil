@@ -47,6 +47,7 @@ balanco:
   ativo_circulante:
 
     disponibilidades:
+      label: "Caixa e Equivalentes de Caixa"
       # [21] CAIXA E EQUIVALENTES DE CAIXA  (saldo CREDOR em todos os períodos)
       #   [28] NUMERÁRIOS
       #     [35] CAIXA
@@ -61,12 +62,14 @@ balanco:
       codigos: ["21"]
 
     clientes:
+      label: "Clientes (Recebíveis)"
       # [18807] RECEBÍVEIS
       #   [203] DUPLICATAS A RECEBER
       #     [9394] COOPERATIVA AGRICOLA DE UNAI LTDA: R$10.983,91D (estável)
       codigos: ["18807"]
 
     adiantamentos_intercompany:
+      label: "Adiantamentos Intercompany PF→PJ"
       # [392] ADIANTAMENTO E EMPRÉSTIMO
       #   [427] EMPRÉSTIMOS
       #     [26069] CAROLINA RIBEIRO DA SILVA LTDA (conta-corrente intercompany PF→PJ)
@@ -75,6 +78,7 @@ balanco:
       codigos: ["392"]
 
     impostos_a_recuperar:
+      label: "Impostos a Recuperar (IRRF)"
       # [483] OUTROS CRÉDITOS
       #   [490] IMPOSTOS A RECUPERAR
       #     [497] FEDERAIS E ESTADUAIS
@@ -84,12 +88,14 @@ balanco:
   ativo_nao_circulante:
 
     investimentos:
+      label: "Investimentos (Consórcios)"
       # [833] INVESTIMENTOS
       #   [3402] Consorcios
       #     [7956] Consorcios Bradesco SA: R$50.387,84D (estável)
       codigos: ["833"]
 
     imobilizado:
+      label: "Imobilizado"
       # [854] IMOBILIZADO
       #   [861] BENS MÓVEIS E IMÓVEIS  (R$21.524.276,88D — estável nos 3 meses)
       #     [868]  Terrenos e Imóveis:            R$5.030.000,00D
@@ -108,6 +114,7 @@ balanco:
   passivo_circulante:
 
     fornecedores:
+      label: "Fornecedores"
       # [1036] FORNECEDORES  (R$3.391.352,65C — estável nos 3 meses)
       #   Principais credores (insumos agrícolas):
       #   [7015]  AGROPAULISTA COM. REP. PROD. AGR. UNAI:  R$69.181,50C
@@ -121,22 +128,22 @@ balanco:
 
   passivo_nao_circulante:
 
-    emprestimos_bancarios_lp:
-      # [1491] EMPRÉSTIMOS BANCÁRIOS
-      #   [113] Emprestimo Banco Sicoob Noroeste de Minas: R$1.088.857,33C (estável)
-      codigos: ["1491"]
-
-    financiamentos_lp:
-      # [1554] FINANCIAMENTOS
-      #   [3721]  Banco Volkswagen:              R$146.099,59C
-      #   [1752]  Banco Bradesco Financiamentos: R$323.836,85C
-      #   [22828] Banco CNH Industrial Capital:  R$1.434.476,39C
-      # Total: R$1.904.412,83C (estável)
-      codigos: ["1554"]
+    emprestimos_financiamentos:
+      label: "Empréstimos e Financiamentos"
+      # [1470] S EMPRÉSTIMOS E FINANCIAMENTOS (saldo já agregado pelo ContaCerta)
+      #   [1491] EMPRÉSTIMOS BANCÁRIOS:
+      #     [113] Emprestimo Banco Sicoob Noroeste de Minas: R$1.088.857,33C
+      #   [1554] FINANCIAMENTOS:
+      #     [3721]  Banco Volkswagen:              R$146.099,59C
+      #     [1752]  Banco Bradesco Financiamentos: R$323.836,85C
+      #     [22828] Banco CNH Industrial Capital:  R$1.434.476,39C
+      # Total: R$2.993.270,16C ✓
+      codigos: ["1470"]
 
   patrimonio_liquido:
 
     lucros_acumulados:
+      label: "Lucros Acumulados"
       # [1848] LUCROS ACUMULADOS  (R$18.462.981,15C — estável)
       #   [1855] LUCROS NO EXERCÍCIO
       #     [1862] Lucros no Exercício: R$10.425.233,96C
@@ -146,6 +153,7 @@ balanco:
       codigos: ["1848"]
 
     prejuizos_acumulados:
+      label: "(-) Prejuízo Acumulado"
       # [1890] (-) PREJUIZO ACUMULADO
       #   [1897] (-) PREJUÍZO DO EXERCÍCIO
       #     [1904] (-) Prejuízo do Exercício (devedor, cresce: R$2,08M→R$2,83M)

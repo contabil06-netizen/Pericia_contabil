@@ -46,6 +46,9 @@ def mapear(balancete: Balancete, config_cliente: dict) -> RelatorioFinal:
                 if not isinstance(grupo_cfg, dict):
                     continue
                 resultado = _somar_grupo(balancete, grupo_cfg, grupo_nome)
+                resultado.label = grupo_cfg.get("label", grupo_nome)
+                resultado.secao = secao_nome
+                resultado.sinal = int(grupo_cfg.get("sinal", 1))
                 chave = f"{secao_nome}.{grupo_nome}"
                 relatorio.grupos_balanco[chave] = resultado
                 if resultado.valor == Decimal("0") and grupo_cfg.get("obrigatorio", False):
@@ -123,6 +126,16 @@ def _somar_grupo(balancete: Balancete, grupo_cfg: dict, nome_grupo: str) -> Grup
 
 
 def _buscar_contas(balancete: Balancete, termo: str, estrategia: str) -> list[ContaContabil]:
+    eh_codigo_exato = (
+        (estrategia == "codigo" or (estrategia == "auto" and re.match(r'^[\d\.]+$', termo)))
+        and "." not in termo
+    )
+    # ContaCerta: IDs são sequenciais — sem sobreposição de prefixo entre pai e filhos.
+    # Match exato em balancete.contas captura o saldo já agregado da SINTETICA,
+    # corrigindo zeros no BP para contas como [392],[483],[833],[1491],[1554].
+    if eh_codigo_exato and balancete.layout_detectado == "contacerta":
+        return [c for c in balancete.contas if c.codigo == termo]
+
     contas = balancete.contas_analiticas
     if estrategia == "codigo" or (estrategia == "auto" and re.match(r'^[\d\.]+$', termo)):
         # Códigos inteiros puros (sem ponto) usam correspondência EXATA.

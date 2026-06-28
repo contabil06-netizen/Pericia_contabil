@@ -126,6 +126,9 @@ class GrupoMapeado(BaseModel):
     celula_excel:     str = ""
     valor:            Decimal = Decimal("0")
     contas_incluidas: list[str] = []
+    label:            str = ""   # label legível para exibição no BP (vem do YAML)
+    secao:            str = ""   # seção do BP (ativo_circulante, passivo_circulante, etc.)
+    sinal:            int = 1    # sinal aplicado no mapeamento (-1 para contas redutoras do PL)
 
 
 class RelatorioFinal(BaseModel):
