@@ -142,3 +142,5 @@ class RelatorioFinal(BaseModel):
     # Estrutura da DRE carregada do YAML — lista ordenada de grupos
     # Cada item: {"chave": str, "label": str, "tipo": str, "prefixos": list[str]}
     dre_estrutura:     list[dict] = []
+    tipo_pessoa:       str = ""   # "PF" ou "PJ" — lido do YAML para compor nome do arquivo
+    nome_cliente:      str = ""   # nome legível do cliente — substitui empresa do PDF no slug

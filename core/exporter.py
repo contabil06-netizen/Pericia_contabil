@@ -77,11 +77,12 @@ def exportar(
     relatorio_anterior: Optional[RelatorioFinal] = None,
 ) -> str:
     Path(output_dir).mkdir(exist_ok=True)
-    empresa  = _limpar_empresa(relatorio.balancete.empresa) or "Empresa"
-    slug     = _slug(empresa)
-    periodo  = relatorio.balancete.periodo_fim.replace("/", "-") \
-               or datetime.now().strftime("%m-%Y")
-    out_path = f"{output_dir}/Empresa_{slug}_{periodo}.xlsx"
+    empresa   = relatorio.nome_cliente or _limpar_empresa(relatorio.balancete.empresa) or "Empresa"
+    slug      = _slug(empresa)
+    periodo   = relatorio.balancete.periodo_fim.replace("/", "-") \
+                or datetime.now().strftime("%m-%Y")
+    sufixo_tp = f"_{relatorio.tipo_pessoa}" if relatorio.tipo_pessoa else ""
+    out_path  = f"{output_dir}/Empresa_{slug}{sufixo_tp}_{periodo}.xlsx"
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)

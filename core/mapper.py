@@ -37,6 +37,8 @@ def mapear(balancete: Balancete, config_cliente: dict) -> RelatorioFinal:
     Retorna RelatorioFinal com grupos_balanco, grupos_dre e dre_estrutura.
     """
     relatorio = RelatorioFinal(balancete=balancete)
+    relatorio.tipo_pessoa  = config_cliente.get("tipo_pessoa", "")
+    relatorio.nome_cliente = config_cliente.get("cliente", "")
     erros = []
 
     # Balanco Patrimonial

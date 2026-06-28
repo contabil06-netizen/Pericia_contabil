@@ -35,6 +35,7 @@
 cliente: "Carolina Ribeiro da Silva Ltda"
 cnpj: "59.297.718/0001-34"
 layout: "contacerta"
+tipo_pessoa: "PJ"
 grupo: "Grupo Carolina Ribeiro"
 
 # ------------------------------------------------------------
@@ -135,15 +136,10 @@ dre_estrutura:
     label: "Receita Bruta"
     tipo: agrupador
     subgrupos:
-      receitas_financeiras_operacionais:
-        label: "Receitas Financeiras (Mútuo Intercompany PF)"
+      receitas_operacionais:
+        label: "Receita Operacional"
         tipo: receita
-        prefixos:
-          - "2023"   # [2023] Receitas Financeiras  ← CONTA FOLHA (leaf)
-                     #   Hierarquia: [2009]RECEITAS FINANCEIRAS E OUTRAS → [2016] → [2023]
-                     #   PERITUS lê contas folha; IDs pai [2009]/[2016] retornam zero.
-                     #   Saldo Ant 04/26 (YTD acum. 02+03): R$5.591,31C
-                     #   Movto abr/26 (período): R$1.271,89C
+        prefixos: []   # PJ holding: sem receita operacional de vendas/serviços
 
   # ── 02. Deduções da Receita Bruta ────────────────────────
   deducoes_receita:
@@ -240,10 +236,14 @@ dre_estrutura:
     label: "Receitas (Despesas) Financeiras"
     tipo: agrupador
     subgrupos:
-      receitas_financeiras_sec:
-        label: "Receitas Financeiras Secundárias"
+      receitas_financeiras:
+        label: "Receitas Financeiras (Mútuo Intercompany PF)"
         tipo: receita_financeira
-        prefixos: []   # Receita principal já mapeada na Linha 01
+        prefixos:
+          - "2023"   # [2023] Receitas Financeiras  ← CONTA FOLHA (leaf)
+                     #   Hierarquia: [2009]RECEITAS FINANCEIRAS E OUTRAS → [2016] → [2023]
+                     #   Saldo Ant 04/26 (YTD acum. 02+03): R$5.591,31C
+                     #   Movto abr/26 (período): R$1.271,89C
       despesas_financeiras:
         label: "Despesas Financeiras"
         tipo: despesa_financeira

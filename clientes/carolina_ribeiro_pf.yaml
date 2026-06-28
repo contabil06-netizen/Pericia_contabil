@@ -34,6 +34,7 @@
 cliente: "Carolina Ribeiro da Silva"
 cpf: "099.365.276-07"
 layout: "contacerta"
+tipo_pessoa: "PF"
 grupo: "Grupo Carolina Ribeiro"
 
 # ------------------------------------------------------------
