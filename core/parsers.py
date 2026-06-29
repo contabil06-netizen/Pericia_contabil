@@ -521,10 +521,10 @@ class ParserVerificacao(BaseParser):
     NIVEL_ANALITICO = 6  # ex: 1.1.1.1.01.00001
 
     RE_ANALITICA = re.compile(
-        r'^([\d\.]+\.\d{5})\s+(\d+)\s+(.+?)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s*$'
+        r'^([\d\.]+\.\d{5})\s+(\d+)\s+(.+?)\s+(-?[\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+(-?[\d\.,]+)\s*$'
     )
     RE_SINTETICA = re.compile(
-        r'^([\d\.]+)\s+(.+?)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s*$'
+        r'^([\d\.]+)\s+(.+?)\s+(-?[\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+(-?[\d\.,]+)\s*$'
     )
 
     def parsear(self, pdf_path: str) -> list[ContaContabil]:

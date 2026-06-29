@@ -173,7 +173,8 @@ def _acc_estrutura(estrutura: list, rel, acc: dict) -> None:
                 acc[sub.get("tipo", "despesa")] += sinal * mov
         else:
             mov = _somar_mov_grupo(_pool_dre(rel),
-                                   grupo.get("prefixos", []))
+                                   grupo.get("prefixos", []),
+                                   inverte_credor=grupo.get("inverte_credor", False))
             sinal = Decimal(str(grupo.get("sinal_acc", 1)))
             acc[tipo] += sinal * mov
 
@@ -205,7 +206,7 @@ def _apurar_fallback(rel) -> Decimal:
     return resultado
 
 
-def _somar_mov_grupo(contas, prefixos: list, excluir: list | None = None) -> Decimal:
+def _somar_mov_grupo(contas, prefixos: list, excluir: list | None = None, inverte_credor: bool = False) -> Decimal:
     excluir = excluir or []
     total = Decimal("0")
     for c in contas:
@@ -213,7 +214,10 @@ def _somar_mov_grupo(contas, prefixos: list, excluir: list | None = None) -> Dec
             continue
         for p in prefixos:
             if c.codigo.startswith(p):
-                total += _mov(c)
+                mov = _mov(c)
+                if inverte_credor and c.natureza == NaturezaSaldo.CREDOR:
+                    mov = -mov   # retificadoras CREDOR dentro de grupo DEVEDOR reduzem o total
+                total += mov
                 break
     return total
 
@@ -414,14 +418,15 @@ def _processar_bloco_dre(ws, row, grupo, rel, rel_ant, idx_ant,
                                             va, vb, base_a, base_b, com, nivel)
 
     else:
-        prefixos = grupo.get("prefixos", [])
-        sinal    = _sinal_display(tipo)
-        mov      = _somar_mov_grupo(_pool_dre(rel), prefixos)
-        val_a    = float(sinal * mov)
+        prefixos  = grupo.get("prefixos", [])
+        inv_cred  = grupo.get("inverte_credor", False)
+        sinal     = _sinal_display(tipo)
+        mov       = _somar_mov_grupo(_pool_dre(rel), prefixos, inverte_credor=inv_cred)
+        val_a     = float(sinal * mov)
         acc[tipo] += mov
         val_b = None
         if com and rel_ant:
-            mov_b = _somar_mov_grupo(_pool_dre(rel_ant), prefixos)
+            mov_b = _somar_mov_grupo(_pool_dre(rel_ant), prefixos, inverte_credor=inv_cred)
             val_b = float(sinal * mov_b)
             acc_ant[tipo] += mov_b
 

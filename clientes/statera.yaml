@@ -1,218 +1,515 @@
 # ============================================================
 # MAPA DE CONTAS — STATERA TRANSPORTES LTDA
-# CNPJ: Nro: 760
-# Layout: Genérico / hierárquico (Verificação Padrão)
-# Gerado com base no balancete 01/2026
-# Nota: balancete 12/2025 não disponível para leitura —
-#       prefixos cobertos pelo balancete 01/2026.
+# CNPJ: 24.211.975/0001-48  |  Nro interno: 760
+# Layout: generico (ParserVerificacao)
+# Sistema contábil: Foco Contábil Ltda (CRC-MG 007358/O)
+# Consolidado com base nos balancetes de jan a mai/2026
+# ============================================================
+#
+# PARTICULARIDADES DO BALANCETE STATERA:
+#
+#   1. Colunas: Conta | Descrição | Saldo Anterior | Débito | Crédito | Saldo Atual
+#   2. Saldo Anterior e Saldo Atual usam sinal negativo para contas credoras
+#      (ex: Passivo, PL, Receitas → -1.491.223,06)
+#   3. Colunas Débito e Crédito são SEMPRE positivas
+#   4. Contas analíticas têm segmento .00XXX + número interno após o código
+#      (ex: 1.1.1.2.01.00008 9 Banco do Brasil)
+#   5. Grupo 5 (Apuração) deve ser IGNORADO — é contrapartida automática
+#   6. Saldos são ACUMULADOS no ano (balancete sem encerramento mensal)
+#   7. Receitas em 3.1.1.1 (natureza credora, saldo atual negativo)
+#   8. Créditos tributários do custo (PIS/COFINS/ICMS) em 3.1.2.1.02.000XX
+#      têm saldo CREDOR (negativo) — são retificadoras do CSP
+#
+# ============================================================
+# CHECKLIST DE VALIDAÇÃO PARA O COWORK
+# ============================================================
+#
+# Após processar qualquer balancete da Statera, o Cowork deve verificar:
+#
+# [V1] EQUAÇÃO PATRIMONIAL
+#      Ativo Total == |Passivo Total| + |PL Total| + |Resultado do Período|
+#      Tolerância: R$ 1,00
+#
+# [V2] PARTIDAS DOBRADAS
+#      Soma de todos os Débitos == Soma de todos os Créditos (do balancete)
+#      Tolerância: R$ 0,05
+#
+# [V3] RECEITA BRUTA ≠ ZERO
+#      Se 3.1.1.1.02.00001 (Vendas de Serviços) tem Crédito > 0 no PDF,
+#      o programa DEVE capturar essa conta. Se receita = 0, o parser
+#      está descartando a linha por causa do saldo negativo.
+#
+# [V4] CUSTO DOS SERVIÇOS — CRÉDITOS TRIBUTÁRIOS DEDUZIDOS
+#      CSP líquido = (soma débitos 3.1.2.1) - (soma créditos 3.1.2.1)
+#      Contas 856, 857, 855 (créditos PIS/COFINS/ICMS) devem ter saldo
+#      CREDOR (negativo). Se o custo estiver inflado, essas contas não
+#      foram lidas pelo parser.
+#
+# [V5] PASSIVO E PL NÃO ZERADOS
+#      Se todos os saldos do grupo 2 são zero, o parser está rejeitando
+#      linhas com saldo negativo.
+#
+# [V6] DEPRECIAÇÃO ACUMULADA
+#      Conta 1.3.3.2 deve ter saldo CREDOR (retificadora do ativo).
+#      Imobilizado líquido = 1.3.3.1 + 1.3.3.3 - |1.3.3.2|
+#      Se imobilizado líquido for negativo, verificar se a depreciação
+#      superou o custo de aquisição (possível em frotas antigas).
+#
+# [V7] CONTAS NOVAS NÃO MAPEADAS
+#      Se o balancete contém prefixos que não estão neste YAML,
+#      reportar ao perito com: código, descrição, saldo e grupo sugerido.
+#
+# [V8] RESULTADO DO PERÍODO
+#      Resultado calculado (Receita - Deduções - Custos - Despesas)
+#      deve conferir com a conta 2.4.3.1.02.00001 (Resultado do Exercício)
+#      e com o grupo 5 (Apuração). Tolerância: R$ 1,00.
+#
 # ============================================================
 
 cliente: "Statera Transportes Ltda"
-cnpj: "Nro: 760"
+cnpj: "24.211.975/0001-48"
 layout: "generico"
 
-# ------------------------------------------------------------
+
+# ============================================================
 # BALANÇO PATRIMONIAL
-# ------------------------------------------------------------
+# ============================================================
+# Premissas contábeis:
+#   - Ativo: natureza DEVEDORA (saldo positivo = bem/direito)
+#   - Passivo: natureza CREDORA (saldo negativo no PDF = obrigação)
+#   - PL: natureza CREDORA, exceto Prejuízos Acumulados (devedor)
+#   - Depreciação Acumulada (1.3.3.2): CREDORA (retificadora do ativo)
+# ============================================================
+
 balanco:
 
+  # ----------------------------------------------------------
+  # ATIVO CIRCULANTE — Natureza: DEVEDORA
+  # ----------------------------------------------------------
   ativo_circulante:
 
     disponibilidades:
-      # 1.1.1.1  — Caixa
-      # 1.1.1.2  — Bancos Conta Movimento
-      #   1.1.1.2.01.00008 — Banco do Brasil
-      #   1.1.1.2.01.00009 — C6 Bank
-      #   1.1.1.2.01.00002 — Caixa Econômica Federal
+      # Caixa (1.1.1.1) e Bancos Conta Movimento (1.1.1.2)
+      # Natureza: Devedora — saldo positivo = dinheiro disponível
+      # Contas analíticas:
+      #   1.1.1.1.01.00001  Caixa Geral
+      #   1.1.1.2.01.00008  Banco do Brasil S/A
+      #   1.1.1.2.01.00009  C6 Bank
+      #   1.1.1.2.01.00002  Caixa Econômica Federal
+      # ALERTA: saldo negativo em banco = erro de extração ou saldo devedor
+      #         transitório (ex: -0,00 do BB em meses sem movimento)
       codigos: ["1.1.1"]
 
     clientes:
-      # 1.1.2.2.02.00001 — Clientes Diversos
+      # 1.1.2.2.02 — Clientes Diversos
+      # Natureza: Devedora — saldo positivo = valores a receber
+      # Obs: na Statera, a conta 222 (Clientes Diversos) zera no mesmo mês
+      #      porque o recebimento é simultâneo ao faturamento
       codigos: ["1.1.2.2.02"]
 
     adiantamentos_empregados:
-      # 1.1.2.2.07.00001 — Adiantamento de Salários
-      # 1.1.2.2.07.00004 — Adiantamento de Viagens
-      # 1.1.2.2.07.00006 — Sem Parar
+      # 1.1.2.2.07 — Adiantamentos a Empregados
+      # Natureza: Devedora — saldo positivo = direito sobre o empregado
+      # Contas analíticas:
+      #   1.1.2.2.07.00001  Adiantamento de Salários
+      #   1.1.2.2.07.00004  Adiantamento de Viagens
+      #   1.1.2.2.07.00006  Sem Parar (pedagiamento)
+      # Obs: Sem Parar é o maior saldo (~R$ 120k) — pedagiamento antecipado
       codigos: ["1.1.2.2.07"]
 
+    adiantamentos_fornecedores:
+      # 1.1.2.2.09 — Adiantamentos a Fornecedores
+      # Natureza: Devedora — saldo positivo = pagamento antecipado
+      # Contas analíticas (surgem a partir de fev/2026):
+      #   1.1.2.2.09.00016  André Ferreira dos Santos
+      #   1.1.2.2.09.00006  Decio Auto Posto Ltda
+      #   1.1.2.2.09.00017  Posto Caxuxa Tapajos
+      codigos: ["1.1.2.2.09"]
+
     outros_adiantamentos:
-      # 1.1.2.2.13.00003 — Saga Autominas (venda veículo)
+      # 1.1.2.2.13 — Outros Adiantamentos
+      # Natureza: Devedora — saldo positivo = direito a receber
+      # Contas analíticas:
+      #   1.1.2.2.13.00003  Saga Autominas (venda veículo — R$ 63.000)
       codigos: ["1.1.2.2.13"]
 
     tributos_a_recuperar:
-      # 1.1.2.2.14.00001 — Cofins Não Cumulativo
-      # 1.1.2.2.14.00032 — CPP a Recuperar
-      # 1.1.2.2.14.00033 — IRF s/ Aplicações Financeiras
-      # 1.1.2.2.14.00034 — IRF s/ Aplicações Financeiras
-      # 1.1.2.2.14.00010 — PIS Não Cumulativo
+      # 1.1.2.2.14 — Tributos a Recuperar
+      # Natureza: Devedora — saldo positivo = crédito fiscal
+      # Contas analíticas:
+      #   1.1.2.2.14.00001  Cofins Não Cumulativo (maior saldo ~R$ 230k)
+      #   1.1.2.2.14.00032  CPP a Recuperar
+      #   1.1.2.2.14.00004  ICMS a Recuperar
+      #   1.1.2.2.14.00033  IRF s/ Aplicações Financeiras (1)
+      #   1.1.2.2.14.00034  IRF s/ Aplicações Financeiras (2)
+      #   1.1.2.2.14.00010  PIS Não Cumulativo
+      # Obs: acúmulo crescente de PIS/COFINS a recuperar indica
+      #       que a empresa gera mais créditos do que débitos
       codigos: ["1.1.2.2.14"]
 
+  # ----------------------------------------------------------
+  # ATIVO NÃO CIRCULANTE — Natureza: DEVEDORA
+  # ----------------------------------------------------------
   ativo_nao_circulante:
 
     realizavel_longo_prazo:
-      # 1.3.1.1.02 — Ativo de Recuperação Judicial
-      #   (Macedo e Souza, Posto Santa Edwiges)
-      # 1.3.1.2.01 — Bloqueio Judicial
+      # 1.3.1 — Realizável a Longo Prazo
+      # Natureza: Devedora — saldo positivo = direito LP
+      # Subgrupos:
+      #   1.3.1.1.02 — Ativo de Recuperação Judicial
+      #     Macedo e Souza (R$ 4.257,91), Posto Santa Edwiges (R$ 1.490,90)
+      #     São créditos que a Statera tem a RECEBER de terceiros em RJ
+      #   1.3.1.2.01 — Bloqueio Judicial
+      #     Valores bloqueados por ordem judicial (crescente: R$ 0 → R$ 9.249)
       codigos: ["1.3.1"]
 
     imobilizado:
-      # 1.3.3.1.03 — Veículos
-      # 1.3.3.1.05 — Ferramentas
-      # 1.3.3.1.09 — Máquinas, Aparelhos e Equipamentos
-      # 1.3.3.2    — (-) Depreciação Acumulada (saldo negativo)
-      # 1.3.3.3.01 — Consórcios (Imobilizações em Andamento)
+      # 1.3.3 — Imobilizado
+      # Natureza: Devedora (líquido = Bens - Depreciação)
+      # Subgrupos:
+      #   1.3.3.1 — Bens em Operação (custo histórico)
+      #     Veículos: R$ 6.962.424,85 (frota de transporte)
+      #     Ferramentas: R$ 4.600,00
+      #     Equipamentos de Comunicação: R$ 369,00
+      #   1.3.3.2 — (-) Depreciação Acumulada (CREDORA — retificadora)
+      #     Veículos: ~R$ 6,4M (depreciação ~92% do custo)
+      #     Taxa mensal: ~R$ 92.628 (R$ 92.570 veículos + R$ 58 outros)
+      #     ALERTA: imobilizado líquido caminha para zero/negativo
+      #   1.3.3.3 — Imobilizações em Andamento
+      #     Consórcio Caixa: R$ 8.030,34 (imóvel não operacional ainda)
       codigos: ["1.3.3"]
 
+  # ----------------------------------------------------------
+  # PASSIVO CIRCULANTE — Natureza: CREDORA
+  # ----------------------------------------------------------
   passivo_circulante:
 
     fornecedores:
-      # 2.1.1.1.02.00002 — Fornecedores Diversos
+      # 2.1.1.1 — Fornecedores
+      # Natureza: Credora — saldo negativo no PDF = dívida com fornecedor
+      # Subgrupos:
+      #   2.1.1.1.01 — Fornecedores Mercado Interno (individualizado a partir de fev/2026)
+      #     Inocêncio de Paula Administração Judicial, Foco Contábil,
+      #     Medisanitas, Trucks, postos de combustível, etc.
+      #   2.1.1.1.02 — Outras Obrigações (Fornecedores Diversos)
+      #     Saldo consolidado histórico: ~R$ 1.491.223,06
+      #     Obs: este saldo pode conter dívidas anteriores à RJ
+      #          que não foram reclassificadas para o PNC
       codigos: ["2.1.1.1"]
 
     obrigacoes_empregaticias:
-      # 2.1.1.2.01 — Obrigações com Pessoal
-      #   (Pró-labore, Rescisões, Salários)
-      # 2.1.1.2.02 — Obrigações Previdenciárias
-      #   (FGTS, INSS, Parcelamentos Previdenciários)
+      # 2.1.1.2 — Obrigações Empregaticias
+      # Natureza: Credora — dívida com empregados e previdência
+      # Subgrupos:
+      #   2.1.1.2.01 — Obrigações com Pessoal
+      #     Pró-labore a pagar, Salários a pagar
+      #   2.1.1.2.02 — Obrigações Previdenciárias
+      #     FGTS, INSS, Parcelamentos previdenciários (PGFN)
+      #     Novos parcelamentos em abr/2026:
+      #       2.1.1.2.02.00013  Parc PGFN 15852958 15x
+      #       2.1.1.2.02.00012  Parc PGFN 15853034 15x
+      #       2.1.1.2.02.00014  Parcelamento 3662640 60x
+      #       2.1.1.2.02.00015  Parc PGFN 15856262 60x
       codigos: ["2.1.1.2"]
 
     obrigacoes_tributarias:
-      # 2.1.1.3.03 — Outras Obrigações Tributárias
-      #   (Cofins, CPP, ICMS, IRF, PIS, Parcelamentos)
+      # 2.1.1.3 — Obrigações Tributárias
+      # Natureza: Credora — impostos a recolher
+      # Contas analíticas:
+      #   Cofins, CPP, ICMS, PIS a recolher (transitórias — zeram após apuração)
+      #   IRF s/ prestação serviços e salários
+      #   Parcelamento PIS/COFINS SIEF
+      #   Parcelamento Simples Nacional
       codigos: ["2.1.1.3"]
 
     provisoes:
-      # 2.1.1.4.01 — Provisão para Férias e Encargos
-      # 2.1.1.4.02 — Provisão para 13º Salário e Encargos
+      # 2.1.1.4 — Provisões
+      # Natureza: Credora — obrigação estimada
+      # Subgrupos:
+      #   2.1.1.4.01 — Provisão Férias e Encargos (FGTS, INSS)
+      #   2.1.1.4.02 — Provisão 13º Salário e Encargos (FGTS, INSS)
       codigos: ["2.1.1.4"]
 
-    emprestimos_socios:
-      # 2.1.1.5.03.00001 — Rogério Firmino do Carmo
+    emprestimos_financiamentos:
+      # 2.1.1.5 — Empréstimos e Financiamentos CP
+      # Natureza: Credora — dívida de curto prazo
+      # Conta única:
+      #   2.1.1.5.03.00001  Rogério Firmino do Carmo (sócio)
+      #   Obs: empréstimo do sócio administrador — mutual
       codigos: ["2.1.1.5"]
 
     adiantamentos_clientes:
-      # 2.1.1.7.01.00001 — Adiantamento de Clientes
+      # 2.1.1.7 — Adiantamentos de Clientes
+      # Natureza: Credora — receita antecipada (obrigação de prestar serviço)
+      # Conta única:
+      #   2.1.1.7.01.00001  Adiantamento de Clientes
+      #   Saldo relevante e crescente (~R$ 507k → R$ 601k)
+      #   Indica que a empresa recebe antes de prestar o serviço
       codigos: ["2.1.1.7"]
 
+  # ----------------------------------------------------------
+  # PASSIVO NÃO CIRCULANTE — Natureza: CREDORA
+  # ----------------------------------------------------------
   passivo_nao_circulante:
 
     passivos_recuperacao_judicial:
-      # 2.2.3.1.01 — Passivos em Recuperação Judicial
-      #   (financiamentos Facchini, Iveco, Scania, Volvo,
-      #    Rodobens, Safra, Mercedes, empréstimos Caixa,
-      #    consórcios, parcelamentos tributários)
+      # 2.2.3 — Passivos em Recuperação Judicial
+      # Natureza: Credora — dívidas sujeitas ao plano de RJ
+      # Total: ~R$ 4.817.911,43 (estável jan-mai, exceto baixa R$ 890
+      #        de Posto Caxuxa II em mai/2026 por pagamento)
+      # Composição principal:
+      #   Financiamentos de veículos (Facchini, Iveco, Scania, Volvo,
+      #     Mercedes, Rodobens, Safra) — ~R$ 4,2M
+      #   Consórcios Caixa — ~R$ 387k
+      #   Empréstimos Caixa — ~R$ 101k
+      #   Parcelamentos tributários art. 10 — ~R$ 51k
+      #   Outros (fornecedores, pessoas físicas) — ~R$ 77k
+      # Obs: NÃO reclassificar para circulante sem análise do PRJ
       codigos: ["2.2.3"]
 
+  # ----------------------------------------------------------
+  # PATRIMÔNIO LÍQUIDO
+  # ----------------------------------------------------------
   patrimonio_liquido:
 
     capital_social:
-      # 2.4.1.1.01.00001 — Rogério Firmino do Carmo
+      # 2.4.1 — Capital Social
+      # Natureza: Credora — capital investido pelo sócio
+      # Conta única:
+      #   2.4.1.1.01.00001  Rogério Firmino do Carmo — R$ 88.000,00
       codigos: ["2.4.1"]
 
     prejuizos_acumulados:
-      # 2.4.3.1.01.00001 — (-) Prejuízos Acumulados
-      # 2.4.3.1.01.00003 — Ajuste de Exercício Anterior
-      # 2.4.3.1.02.00001 — Resultado do Exercício em Curso
-      #   (saldo credor = lucro acumulado no ano)
+      # 2.4.3 — Lucros/Prejuízos Acumulados
+      # NATUREZA ESPECIAL: saldo DEVEDOR no PDF (positivo ~R$ 5,9M)
+      #   porque são PREJUÍZOS acumulados (retificadora do PL)
+      # Subgrupos:
+      #   2.4.3.1.01.00001  (-) Prejuízos Acumulados — R$ 5.914.375,38
+      #     Devedor — reduz o PL
+      #   2.4.3.1.01.00003  Ajuste de Exercício Anterior — R$ -302,44
+      #     Credor — ajuste pontual
+      #   2.4.3.1.02.00001  Resultado do Exercício em Curso
+      #     Devedor (prejuízo corrente) — acumula mês a mês
+      #
+      # sinal: -1 porque o mapper inverte credores (valor = -saldo * sinal)
+      # e os prejuízos são devedores, precisam entrar negativos no PL
       codigos: ["2.4.3"]
       sinal: -1
 
 
-# ------------------------------------------------------------
-# ESTRUTURA DA DRE
-# Prefixo raiz das contas de resultado: 3
-# Ordem: Receita Bruta → Deduções → Custos →
-#         Despesas Admin → Despesas Financeiras
-# ------------------------------------------------------------
+# ============================================================
+# DEMONSTRAÇÃO DO RESULTADO DO EXERCÍCIO (DRE)
+# ============================================================
+# Estrutura espelhada no modelo DRE preta e branca:
+#   01. Receita Bruta
+#   02. Dedução da Receita Bruta
+#   03. Receita Operacional Líquida (subtotal)
+#   04. Custo dos Serviços Prestados
+#   05. Lucro (Prejuízo) Bruto (subtotal)
+#   06. Despesas Operacionais (agrupador: pessoal + adm + tributária)
+#   07. Outras Receitas (Despesas) Operacionais (agrupador)
+#   08. Resultado Operacional (subtotal)
+#   09. Depreciação e Amortização (addback informativo para EBITDA)
+#   10. EBITDA (subtotal)
+#   11. Receitas (Despesas) Financeiras (agrupador)
+#   12. Lucro (Prejuízo) Antes do IRPJ e CSLL (subtotal)
+#   13. Provisão para IRPJ e CSLL
+#   14. Lucro (Prejuízo) Líquido do Período (subtotal)
+#
+# REGRA DE SINAIS NO BALANCETE:
+#   Receitas (3.1.1.1): natureza CREDORA → saldo negativo no PDF
+#     Valor DRE = |saldo atual| (absoluto)
+#   Deduções (3.1.1.3): natureza DEVEDORA → saldo positivo no PDF
+#     Valor DRE = saldo atual (direto)
+#   Custos (3.1.2.1): natureza DEVEDORA → saldo positivo
+#     EXCETO créditos tributários (856,857,855) que são CREDORES (negativos)
+#     CSP líquido = soma(devedoras) - soma(credoras) → inverte_credor: true
+#   Despesas (3.1.2.3, 3.1.3.1.01): natureza DEVEDORA → saldo positivo
+#   Receitas Financeiras (3.1.3.1.02): natureza CREDORA → saldo negativo
+#
+# TIPOS E FÓRMULAS:
+#   receita / deducao / custo / despesa : acumuladores base
+#   tributaria : despesa tributária — excluída do EBITDA, incluída no Resultado Operacional
+#   outra_receita / outra_despesa       : itens não operacionais recorrentes
+#   depreciacao                         : addback para EBITDA (conta já somada em custo/despesa)
+#   receita_financeira / despesa_financeira : resultado financeiro
+#   provisao_ir                         : IRPJ/CSLL apurado
+#
+# ============================================================
+
 dre_estrutura:
 
+  # 01. RECEITA BRUTA
   receita_bruta:
     label: "Receita Bruta de Vendas e Serviços"
     tipo: receita
     prefixos:
-      - "3.1.1.1"    # Receita Bruta Operacional
-                     # 3.1.1.1.02.00001 — Vendas de Serviços a Prazo
+      - "3.1.1.1"
+      # Conta analítica:
+      #   3.1.1.1.02.00001  Vendas de Serviços a Prazo
+      # Natureza: CREDORA (saldo negativo no PDF → parser converte para positivo + nat=CREDOR)
 
+  # 02. DEDUÇÕES DA RECEITA BRUTA
   deducoes_receita:
     label: "(-) Deduções da Receita Bruta"
     tipo: deducao
     prefixos:
-      - "3.1.1.3"    # Deduções das Vendas
-                     # 3.1.1.3.01.00001 — Cofins s/ Faturamento
-                     # 3.1.1.3.01.00009 — CPP
-                     # 3.1.1.3.01.00004 — ICMS
-                     # 3.1.1.3.01.00006 — PIS s/ Faturamento
+      - "3.1.1.3"
+      # Contas analíticas:
+      #   3.1.1.3.01.00001  Cofins s/ Faturamento
+      #   3.1.1.3.01.00009  CPP
+      #   3.1.1.3.01.00004  ICMS
+      #   3.1.1.3.01.00006  PIS s/ Faturamento
+      # Natureza: DEVEDORA — retificadora da receita
 
-  custos_servicos:
-    label: "Custos dos Serviços Prestados"
+  # 03. RECEITA OPERACIONAL LÍQUIDA (subtotal)
+  receita_operacional_liquida:
+    label: "Receita Operacional Líquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  # 04. CUSTO DOS SERVIÇOS PRESTADOS
+  # inverte_credor: true — contas CREDOR dentro de 3.1.2.1 (855/856/857) são
+  # retificadoras do CSP; _somar_mov_grupo negativa o _mov delas antes de somar.
+  # CSP líquido jan/2026 = 124.764,22 (devedoras) - 11.704,37 (credoras) = 113.059,85
+  custo_operacional:
+    label: "Custo dos Serviços Prestados"
     tipo: custo
+    inverte_credor: true
     prefixos:
-      - "3.1.2.1"    # Custos
-                     # 3.1.2.1.02.00028 — (-) Crédito Cofins Não Cumulativo
-                     # 3.1.2.1.02.00029 — (-) Crédito ICMS
-                     # 3.1.2.1.02.00027 — (-) Crédito PIS Não Cumulativo
-                     # 3.1.2.1.02.00018 — Encargos de Depreciação
-                     # 3.1.2.1.02.00001 — Material Aplicado
-                     # 3.1.2.1.02.00024 — Outros Custos
-                     # 3.1.2.1.02.00008 — Prestação Serviços Pessoa Jurídica
+      - "3.1.2.1"
+      # Contas DEVEDORAS (custos efetivos):
+      #   3.1.2.1.02.00018  Encargos de Depreciação (~R$ 92.570/mês)
+      #   3.1.2.1.02.00001  Material Aplicado
+      #   3.1.2.1.02.00024  Outros Custos
+      #   3.1.2.1.02.00008  Prestação Serviços Pessoa Jurídica
+      # Contas CREDORAS (retificadoras — créditos tributários):
+      #   3.1.2.1.02.00028  (-) Crédito Cofins Não Cumulativo
+      #   3.1.2.1.02.00029  (-) Crédito ICMS
+      #   3.1.2.1.02.00027  (-) Crédito PIS Não Cumulativo
 
-  despesas_pessoal:
-    label: "Despesas com Pessoal"
-    tipo: despesa
-    prefixos:
-      - "3.1.2.3.01"  # C/pessoal
-                      # 3.1.2.3.01.00001 — 13º Salário
-                      # 3.1.2.3.01.00003 — Assistência Médica
-                      # 3.1.2.3.01.00008 — Férias
-                      # 3.1.2.3.01.00009 — FGTS
-                      # 3.1.2.3.01.00010 — INSS
-                      # 3.1.2.3.01.00011 — Pró-labore
-                      # 3.1.2.3.01.00015 — Salários e Ordenados
+  # 05. LUCRO (PREJUÍZO) BRUTO (subtotal)
+  lucro_bruto:
+    label: "Lucro (Prejuízo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
 
-  despesas_servicos_terceiros:
-    label: "Serviços de Terceiros"
-    tipo: despesa
-    prefixos:
-      - "3.1.2.3.02"  # Serviços de Terceiros
-                      # 3.1.2.3.02.00003 — Serviços Empresas
+  # 06. DESPESAS OPERACIONAIS
+  despesas_operacionais:
+    label: "Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
 
-  despesas_ocupacao:
-    label: "Despesas de Ocupação"
-    tipo: despesa
-    prefixos:
-      - "3.1.2.3.03"  # C/ocupação
-                      # 3.1.2.3.03.00002 — Conservação e Reparos
+      trabalhistas:
+        label: "Despesas com Pessoal"
+        tipo: despesa
+        prefixos:
+          - "3.1.2.3.01"
+          # 3.1.2.3.01.00001  13º Salário (provisão mensal)
+          # 3.1.2.3.01.00003  Assistência Médica
+          # 3.1.2.3.01.00008  Férias (provisão)
+          # 3.1.2.3.01.00009  FGTS
+          # 3.1.2.3.01.00010  INSS
+          # 3.1.2.3.01.00011  Pró-Labore
+          # 3.1.2.3.01.00015  Salários e Ordenados
 
-  despesas_servicos_utilidades:
-    label: "Serviços e Utilidades"
-    tipo: despesa
-    prefixos:
-      - "3.1.2.3.04"  # Serviços e Utilidades
-                      # 3.1.2.3.04.00001 — Água e Luz
-                      # 3.1.2.3.04.00006 — Seguro
-                      # 3.1.2.3.04.00007 — Telefones
+      adm_gerais:
+        label: "Despesas Administrativas e Gerais"
+        tipo: despesa
+        prefixos:
+          - "3.1.2.3.02"   # Serviços de Terceiros
+          - "3.1.2.3.03"   # C/Ocupação (Aluguéis, Reparos, IPTU)
+          - "3.1.2.3.04"   # Serviços e Utilidades (Água, Luz, Seguro, Telefones)
+          - "3.1.2.3.06"   # Serviços Profissionais (Assessoria Contábil)
+          - "3.1.2.3.08"   # Despesas Gerais (inclui Depreciação Adm ~R$ 57,80/mês)
 
-  despesas_servicos_profissionais:
-    label: "Serviços Profissionais e Contábeis"
-    tipo: despesa
-    prefixos:
-      - "3.1.2.3.06"  # Serviços Profissionais e Contratuais
-                      # 3.1.2.3.06.00001 — Assessoria Contábil e Fiscal
+      tributarias:
+        label: "Despesas Tributárias"
+        tipo: tributaria
+        prefixos:
+          - "3.1.2.3.07"
+          # 3.1.2.3.07.00005  Impostos e Taxas Diversas (a partir de abr/2026)
+          # 3.1.2.3.07.00007  Multas Fiscais
+          # Tipo tributaria: excluído do EBITDA, incluído no Resultado Operacional
 
-  despesas_gerais:
-    label: "Despesas Gerais Administrativas"
-    tipo: despesa
-    prefixos:
-      - "3.1.2.3.08"  # Despesas Gerais
-                      # 3.1.2.3.08.00001 — Associações e Sindicatos
-                      # 3.1.2.3.08.00007 — Depreciações e Amortizações
-                      # 3.1.2.3.08.00019 — Processamento de Dados
+  # 07. OUTRAS RECEITAS (DESPESAS) OPERACIONAIS
+  outras_receitas_despesas:
+    label: "Outras Receitas (Despesas) Operacionais"
+    tipo: agrupador
+    subgrupos:
 
-  despesas_financeiras:
-    label: "Despesas Financeiras"
-    tipo: despesa
+      outras_receitas:
+        label: "Outras Receitas"
+        tipo: outra_receita
+        prefixos: []
+
+      outras_despesas:
+        label: "Outras Despesas"
+        tipo: outra_despesa
+        prefixos: []
+
+  # 08. RESULTADO OPERACIONAL (subtotal)
+  resultado_operacional:
+    label: "Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
+
+  # 09. DEPRECIAÇÃO E AMORTIZAÇÃO (addback informativo — não altera resultado final)
+  # As mesmas contas já estão contidas em custo_operacional (00018) e adm_gerais (00007).
+  # O addback reconstitui o EBITDA: Resultado Operacional + D&A = EBITDA.
+  depreciacao_amortizacao:
+    label: "Depreciação e Amortização"
+    tipo: depreciacao
     prefixos:
-      - "3.1.3"       # Financeiras Líquidas
-                      # 3.1.3.1.01.00001 — Comissões e Despesas Bancárias
-                      # 3.1.3.1.01.00005 — Juros de Mora
+      - "3.1.2.1.02.00018"   # Depreciação de Veículos (~R$ 92.570/mês)
+      - "3.1.2.3.08.00007"   # Depreciação Adm (~R$ 57,80/mês)
+      # Total jan/2026: R$ 92.628,16
+
+  # 10. EBITDA (subtotal)
+  # tributaria excluída por definição do EBITDA
+  ebitda:
+    label: "EBITDA"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa + outra_receita - outra_despesa + depreciacao"
+
+  # 11. RECEITAS (DESPESAS) FINANCEIRAS
+  financeiras:
+    label: "Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+
+      receitas_financeiras:
+        label: "Receitas Financeiras"
+        tipo: receita_financeira
+        prefixos:
+          - "3.1.3.1.02"
+          # 3.1.3.1.02.00001  Descontos Obtidos (a partir de abr/2026 — valor irrisório)
+          # Natureza: CREDORA
+
+      despesas_financeiras:
+        label: "Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "3.1.3.1.01"
+          # 3.1.3.1.01.00001  Comissões e Despesas Bancárias
+          # 3.1.3.1.01.00005  Juros de Mora
+          # Natureza: DEVEDORA
+
+  # 12. LUCRO (PREJUÍZO) ANTES DO IRPJ E CSLL (subtotal)
+  antes_irpj:
+    label: "Lucro (Prejuízo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira"
+
+  # 13. PROVISÃO PARA IRPJ E CSLL
+  provisao_irpj:
+    label: "(-) Provisão para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []
+    # Statera está em Lucro Real / Recuperação Judicial — provisão zerada nos períodos analisados
+
+  # 14. LUCRO (PREJUÍZO) LÍQUIDO DO PERÍODO (subtotal)
+  lucro_liquido:
+    label: "Lucro (Prejuízo) Líquido do Período"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa + receita_financeira - despesa_financeira - provisao_ir"
