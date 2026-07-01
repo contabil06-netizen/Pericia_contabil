@@ -132,10 +132,11 @@ def _buscar_contas(balancete: Balancete, termo: str, estrategia: str) -> list[Co
         (estrategia == "codigo" or (estrategia == "auto" and re.match(r'^[\d\.]+$', termo)))
         and "." not in termo
     )
-    # ContaCerta: IDs são sequenciais — sem sobreposição de prefixo entre pai e filhos.
+    # ContaCerta / Somar: IDs e nomes de grupo são únicos — sem sobreposição de prefixo.
     # Match exato em balancete.contas captura o saldo já agregado da SINTETICA,
-    # corrigindo zeros no BP para contas como [392],[483],[833],[1491],[1554].
-    if eh_codigo_exato and balancete.layout_detectado == "contacerta":
+    # necessário para ContaCerta ([392],[483],...) e para Somar (grupos totalizadores
+    # como "CAIXA", "DUPLICATAS A RECEBER", cujo código é o nome[:30] da linha "=").
+    if eh_codigo_exato and balancete.layout_detectado in ("contacerta", "somar"):
         return [c for c in balancete.contas if c.codigo == termo]
 
     contas = balancete.contas_analiticas

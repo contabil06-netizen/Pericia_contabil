@@ -75,6 +75,7 @@ def exportar(
     relatorio: RelatorioFinal,
     output_dir: str = "output",
     relatorio_anterior: Optional[RelatorioFinal] = None,
+    relatorio_anterior_modificado: Optional[RelatorioFinal] = None,
 ) -> str:
     Path(output_dir).mkdir(exist_ok=True)
     empresa   = relatorio.nome_cliente or _limpar_empresa(relatorio.balancete.empresa) or "Empresa"
@@ -92,7 +93,8 @@ def exportar(
 
     # DRE primeiro, depois BP (o resultado apurado na DRE alimenta o PL do BP)
     _construir_dre(wb, relatorio, relatorio_anterior, resultado_atual, resultado_anterior)
-    _construir_bp(wb, relatorio, relatorio_anterior, resultado_atual)
+    _construir_bp(wb, relatorio, relatorio_anterior, resultado_atual,
+                  rel_ant_mod=relatorio_anterior_modificado)
     _construir_validacao(wb, relatorio)
     _construir_extracao(wb, relatorio)
 
@@ -100,8 +102,9 @@ def exportar(
     return out_path
 
 
-def exportar_sem_modelo(relatorio, output_dir="output", relatorio_anterior=None):
-    return exportar(relatorio, output_dir, relatorio_anterior)
+def exportar_sem_modelo(relatorio, output_dir="output", relatorio_anterior=None,
+                        relatorio_anterior_modificado=None):
+    return exportar(relatorio, output_dir, relatorio_anterior, relatorio_anterior_modificado)
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +216,15 @@ def _somar_mov_grupo(contas, prefixos: list, excluir: list | None = None, invert
         if excluir and any(c.codigo.startswith(e) for e in excluir):
             continue
         for p in prefixos:
-            if c.codigo.startswith(p):
+            # Código inteiro puro (sem ponto) → match EXATO.
+            # Evita colisão entre IDs de DRE (ex: "329", "340") e IDs de
+            # clientes com 4+ dígitos (ex: "3293", "3406") no layout Somar.
+            # Códigos hierárquicos com ponto (ex: "3.4.1") continuam com startswith.
+            if "." not in p and re.match(r'^\d+$', p):
+                matches = c.codigo == p
+            else:
+                matches = c.codigo.startswith(p)
+            if matches:
                 mov = _mov(c)
                 if inverte_credor and c.natureza == NaturezaSaldo.CREDOR:
                     mov = -mov   # retificadoras CREDOR dentro de grupo DEVEDOR reduzem o total
@@ -223,11 +234,14 @@ def _somar_mov_grupo(contas, prefixos: list, excluir: list | None = None, invert
 
 
 def _pool_dre(rel) -> list:
-    # ContaCerta usa IDs sequenciais: pai [2884] e filhos [2898],[5694] não
-    # compartilham prefixo, então startswith age como match exato — sem double-counting.
-    # Contas folha classificadas como SINTETICA (ex: [2037] "Receitas Diversas")
-    # ficam fora de contas_analiticas; pesquisar em contas resolve o problema.
-    if rel and rel.balancete.layout_detectado == "contacerta":
+    # ContaCerta / Somar: pesquisar em balancete.contas (inclui sintéticas).
+    # ContaCerta: IDs sequenciais sem prefixo comum → sem double-counting via startswith.
+    # Somar: grupos totalizadores (ex: "DESPESAS ADMINISTRATIVAS", "CUSTO DAS VENDAS")
+    # são sintéticas cujo código = nome[:30]; necessários para DRE quando o grupo
+    # tem dezenas de analíticas que seriam impraticáveis de listar uma a uma.
+    # Inteiros na dre_estrutura.prefixos usam match exato (ver _somar_mov_grupo),
+    # então não há risco de double-counting entre sintética e analítica.
+    if rel and rel.balancete.layout_detectado in ("contacerta", "somar"):
         return rel.balancete.contas
     return rel.balancete.contas_analiticas
 
@@ -620,14 +634,25 @@ def _display_grupo_bp(grupo, secao: str) -> float:
 
 def _construir_bp_yaml(wb, rel: RelatorioFinal,
                        rel_ant: Optional[RelatorioFinal],
-                       resultado_periodo: Decimal):
+                       resultado_periodo: Decimal,
+                       rel_ant_mod: Optional[RelatorioFinal] = None):
     """
     Renderiza o Balanço Patrimonial a partir de rel.grupos_balanco (mapeamento YAML).
-    Usado para layouts cujos códigos não seguem a convenção hierárquica 1.x/2.x (ex: ContaCerta).
+    Usado para layouts cujos códigos não seguem a convenção hierárquica 1.x/2.x (ex: ContaCerta, Somar).
+
+    rel_ant_mod: balancete do período anterior com saldos MODIFICADOS (retroativos).
+    Quando fornecido, adiciona 3 colunas extras mostrando:
+      - Saldo modificado do período anterior
+      - AV% sobre o total modificado
+      - Var.% modificado vs original (evidencia a diferença retroativa)
     """
+    COR_MOD_BG  = "4A235A"   # roxo escuro — cabeçalho das colunas MODIFICADO
+    COR_MOD_PAR = "EDE0F5"   # roxo claro  — fundo de linhas pares MODIFICADO
+
     ws  = wb.create_sheet("Balanço Patrimonial")
     b   = rel.balancete
     com = rel_ant is not None
+    mod = rel_ant_mod is not None
     resultado_anterior = _apurar_resultado(rel_ant) if com else None
     eh_prej     = resultado_periodo < Decimal("0")
     eh_prej_ant = (resultado_anterior < Decimal("0")) if resultado_anterior is not None else False
@@ -662,8 +687,24 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
     else:
         total_ativo_b = total_passpl_b = 1.0
 
+    # Bases AV% — período anterior MODIFICADO (saldo_anterior do balancete atual)
+    total_ativo_b_mod = total_passpl_b_mod = 1.0
+    if mod and rel_ant_mod.grupos_balanco:
+        total_ativo_b_mod = sum(
+            abs(_display_grupo_bp(g, k.split(".")[0]))
+            for k, g in rel_ant_mod.grupos_balanco.items()
+            if k.split(".")[0].startswith("ativo")
+        ) or 1.0
+        total_passpl_b_mod = sum(
+            abs(_display_grupo_bp(g, k.split(".")[0]))
+            for k, g in rel_ant_mod.grupos_balanco.items()
+            if not k.split(".")[0].startswith("ativo")
+        ) or 1.0
+        if resultado_anterior is not None:
+            total_passpl_b_mod += abs(float(resultado_anterior))
+
     # Título
-    n_cols = 8 if com else 5
+    n_cols = (11 if mod else 8) if com else 5
     ws.merge_cells(f"A1:{get_column_letter(n_cols)}1")
     _cel(ws["A1"],
          f"BALANÇO PATRIMONIAL  —  {b.empresa}   |   CNPJ: {b.cnpj}",
@@ -671,18 +712,23 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
     ws.row_dimensions[1].height = 28
 
     # Cabeçalho colunas
+    per_ant = rel_ant.balancete.periodo_fim if com else ""
     if com:
         hdrs = ["Conta", "Descrição",
-                f"Saldo {rel_ant.balancete.periodo_fim}", "AV%",
+                f"Saldo {per_ant}", "AV%",
                 f"Saldo {b.periodo_fim}", "AV%",
                 "Var. R$", "Var. %"]
+        if mod:
+            hdrs += [f"Mod. {per_ant}", "AV%", "Var.% vs orig"]
     else:
         hdrs = ["Conta", "Descrição", f"Saldo {b.periodo_fim}", "AV%", "Var. %"]
 
     for col, h in enumerate(hdrs, 1):
+        # colunas 9-11 (MODIFICADO) usam cor própria
+        bg_hdr = COR_MOD_BG if (mod and col >= 9) else COR_TITULO_BG
         c = ws.cell(row=2, column=col, value=h)
         c.font      = Font(bold=True, color=COR_TITULO_FG, name="Arial", size=10)
-        c.fill      = PatternFill("solid", fgColor=COR_TITULO_BG)
+        c.fill      = PatternFill("solid", fgColor=bg_hdr)
         c.alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[2].height = 18
 
@@ -696,8 +742,9 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
         if not grupos_secao:
             continue
 
-        base_a = total_ativo_a if secao_key.startswith("ativo") else total_passpl_a
-        base_b = (total_ativo_b if secao_key.startswith("ativo") else total_passpl_b) if com else None
+        base_a     = total_ativo_a     if secao_key.startswith("ativo") else total_passpl_a
+        base_b     = (total_ativo_b     if secao_key.startswith("ativo") else total_passpl_b)     if com else None
+        base_b_mod = (total_ativo_b_mod if secao_key.startswith("ativo") else total_passpl_b_mod) if mod else None
 
         # Cabeçalho da seção
         ws.merge_cells(f"A{row}:{get_column_letter(n_cols)}{row}")
@@ -708,8 +755,9 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
         ws.row_dimensions[row].height = 16
         row += 1
 
-        total_secao_a: float = 0.0
-        total_secao_b = None
+        total_secao_a:   float = 0.0
+        total_secao_b            = None
+        total_secao_b_mod        = None
 
         # Resultado do Período — inserido no início do PL
         if secao_key == "patrimonio_liquido":
@@ -729,6 +777,11 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
                 _val_cel(ws, row, 6, _av(val_res_a, base_a), fmt=FMT_PERCENT, bold=True, bg=bg_res)
                 _val_cel(ws, row, 7, _var_r(val_res_a, val_res_b), bold=True, bg=bg_res)
                 _val_cel(ws, row, 8, _var_p(val_res_a, val_res_b), fmt=FMT_PERCENT, bold=True, bg=bg_res)
+                # MODIFICADO: resultado idêntico ao original (provém da DRE, não do saldo_anterior)
+                if mod:
+                    _val_cel(ws, row, 9,  val_res_b, bold=True, bg=bg_res_ant)
+                    _val_cel(ws, row, 10, _av(val_res_b, base_b_mod), fmt=FMT_PERCENT, bold=True, bg=bg_res_ant)
+                    _val_cel(ws, row, 11, None, fmt=FMT_PERCENT, bold=True, bg=bg_res_ant)
             else:
                 _val_cel(ws, row, 3, val_res_a, bold=True, bg=bg_res)
                 _val_cel(ws, row, 4, _av(val_res_a, base_a), fmt=FMT_PERCENT, bold=True, bg=bg_res)
@@ -741,7 +794,8 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
 
             total_secao_a += val_res_a
             if com and val_res_b is not None:
-                total_secao_b = (total_secao_b or 0.0) + val_res_b
+                total_secao_b     = (total_secao_b     or 0.0) + val_res_b
+                total_secao_b_mod = (total_secao_b_mod or 0.0) + val_res_b  # mesmo resultado
 
         # Grupos da seção
         for chave, grupo in grupos_secao.items():
@@ -751,8 +805,14 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
                 grupo_ant = rel_ant.grupos_balanco.get(chave)
                 if grupo_ant:
                     val_b = _display_grupo_bp(grupo_ant, secao_key)
+            val_b_mod = None
+            if mod and rel_ant_mod.grupos_balanco:
+                grupo_ant_mod = rel_ant_mod.grupos_balanco.get(chave)
+                if grupo_ant_mod:
+                    val_b_mod = _display_grupo_bp(grupo_ant_mod, secao_key)
 
-            bg = COR_LINHA_PAR if row % 2 == 0 else "FFFFFF"
+            bg     = COR_LINHA_PAR if row % 2 == 0 else "FFFFFF"
+            bg_mod = COR_MOD_PAR   if row % 2 == 0 else "FFFFFF"
             ws.cell(row=row, column=1, value="")
             cd = ws.cell(row=row, column=2, value=grupo.label or grupo.nome)
             cd.font      = Font(name="Arial", size=10)
@@ -769,6 +829,12 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
                          bg=bg if bg != "FFFFFF" else None)
                 _val_cel(ws, row, 8, _var_p(val_a, val_b), fmt=FMT_PERCENT,
                          bg=bg if bg != "FFFFFF" else None)
+                if mod:
+                    _val_cel(ws, row, 9,  val_b_mod, bg=bg_mod if bg_mod != "FFFFFF" else None)
+                    _val_cel(ws, row, 10, _av(val_b_mod, base_b_mod), fmt=FMT_PERCENT,
+                             bg=bg_mod if bg_mod != "FFFFFF" else None)
+                    _val_cel(ws, row, 11, _var_p(val_b_mod, val_b), fmt=FMT_PERCENT,
+                             bg=bg_mod if bg_mod != "FFFFFF" else None)
             else:
                 _val_cel(ws, row, 3, val_a, bg=bg if bg != "FFFFFF" else None)
                 _val_cel(ws, row, 4, _av(val_a, base_a), fmt=FMT_PERCENT,
@@ -783,6 +849,8 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
             total_secao_a += val_a
             if com and val_b is not None:
                 total_secao_b = (total_secao_b or 0.0) + val_b
+            if mod and val_b_mod is not None:
+                total_secao_b_mod = (total_secao_b_mod or 0.0) + val_b_mod
             row += 1
 
         # Subtotal da seção
@@ -802,6 +870,12 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
                      bold=True, bg=COR_SUBTOTAL_BG)
             _val_cel(ws, row, 8, _var_p(total_secao_a, total_secao_b), fmt=FMT_PERCENT,
                      bold=True, bg=COR_SUBTOTAL_BG)
+            if mod:
+                _val_cel(ws, row, 9,  total_secao_b_mod, bold=True, bg=COR_MOD_BG)
+                _val_cel(ws, row, 10, _av(total_secao_b_mod, base_b_mod), fmt=FMT_PERCENT,
+                         bold=True, bg=COR_MOD_BG)
+                _val_cel(ws, row, 11, _var_p(total_secao_b_mod, total_secao_b), fmt=FMT_PERCENT,
+                         bold=True, bg=COR_MOD_BG)
         else:
             _val_cel(ws, row, 3, total_secao_a, bold=True, bg=COR_SUBTOTAL_BG)
             _val_cel(ws, row, 4, _av(total_secao_a, base_a), fmt=FMT_PERCENT,
@@ -818,6 +892,10 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
         ws.column_dimensions["F"].width = 8
         ws.column_dimensions["G"].width = 16
         ws.column_dimensions["H"].width = 10
+        if mod:
+            ws.column_dimensions["I"].width = 18
+            ws.column_dimensions["J"].width = 8
+            ws.column_dimensions["K"].width = 10
     else:
         ws.column_dimensions["E"].width = 10
     ws.freeze_panes = "A3"
@@ -829,11 +907,14 @@ def _construir_bp_yaml(wb, rel: RelatorioFinal,
 
 def _construir_bp(wb, rel: RelatorioFinal,
                   rel_ant: Optional[RelatorioFinal],
-                  resultado_periodo: Decimal):
+                  resultado_periodo: Decimal,
+                  rel_ant_mod: Optional[RelatorioFinal] = None):
     # Layouts sem hierarquia numérica 1.x/2.x usam o BP guiado pelo YAML (grupos_balanco).
     # Layouts hierárquicos (Socium) continuam usando o renderer legado por prefixo.
-    if rel.grupos_balanco and rel.balancete.layout_detectado == "contacerta":
-        _construir_bp_yaml(wb, rel, rel_ant, resultado_periodo)
+    # Layouts sem hierarquia numérica 1.x/2.x usam BP guiado pelo YAML.
+    # Somar: códigos são IDs numéricos ou nomes de grupo[:30] — sem estrutura 1./2.
+    if rel.grupos_balanco and rel.balancete.layout_detectado in ("contacerta", "somar"):
+        _construir_bp_yaml(wb, rel, rel_ant, resultado_periodo, rel_ant_mod=rel_ant_mod)
         return
 
     ws  = wb.create_sheet("Balanço Patrimonial")

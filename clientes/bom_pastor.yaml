@@ -1,0 +1,262 @@
+# ============================================================
+#  BOM PASTOR PAPEIS LTDA — Configuração PERITUS
+#  CNPJ: 16.772.642/0001-49  |  Cód. interno: 00162
+#  Layout: somar  (SOMAR CONTABILIDADE S/S LTDA)
+#  Status: Recuperação Judicial (RJ)
+#
+#  Agrupamentos validados contra o BP gerencial (fev-26 / jan-26).
+#  Todas as somas conferem com diferença máxima de R$1 (arredondamento).
+# ============================================================
+#
+# MECÂNICA DE CODIGOS (layout somar):
+#   Analíticas : código = ID numérico bracket [N]  (ex: "329", "247")
+#   Sintéticas : código = nome[:30] da linha "=" no PDF
+#                (ex: "CUSTO DAS VENDAS", "SALÁRIOS E CONTRIBUIÇÕES A PAG")
+#
+# CONVENÇÕES DO MAPPER (_buscar_contas):
+#   - código inteiro puro (sem ponto) → match EXATO
+#   - código string                   → match EXATO (fix somar v4.x)
+#   - código com ponto                → startswith em contas_analiticas
+#   - múltiplos códigos por grupo     → union de todos os matches (soma)
+#
+# CONVENÇÕES DO EXPORTER (_somar_mov_grupo / DRE):
+#   - prefixo inteiro (ex: "329")  → match EXATO
+#   - prefixo string               → startswith (sintéticas únicas)
+#
+# NOTAS ESPECIAIS:
+#   - "CAPITAL SOCIAL" aparece em dois níveis sintéticos → usar analítica
+#     [247] para evitar duplicação de valor.
+#   - "CREDORES DIVERSOS" aparece duas vezes no PC → captura e soma ambas
+#     (intencional: totaliza credores diversos circulantes).
+#   - Quirografários classes I / III / IV truncam todas para
+#     "TITULARES DE CRÉDITOS QUIROGRA" → um código captura as 3 classes.
+#   - "RECEITAS OPERACIONAIS" e "RECEITAS FINANCEIRAS" têm dois níveis
+#     sintéticos cada → DRE usa IDs analíticos individuais.
+# ============================================================
+
+cliente: "BOM PASTOR PAPEIS LTDA"
+cnpj: "16.772.642/0001-49"
+layout: somar
+tipo_pessoa: PJ
+
+# ------------------------------------------------------------
+# BALANÇO PATRIMONIAL
+# Validação cruzada (fev-26):
+#   Ativo Total = 16.366.966  |  Passivo+PL Total = 16.366.966  ✓
+# ------------------------------------------------------------
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      label: "Disponibilidades"
+      # Caixa Geral [1] + subcontas, CEF [7], Santander [9] e outros,
+      # mais aplicações de curtíssimo prazo.
+      # fev-26: 295.529  |  jan-26: 287.673
+      codigos:
+        - "CAIXA"
+        - "BANCOS C/MOVIMENTO"
+        - "APLICAÇÕES FINANCEIRAS"
+
+    duplicatas_receber:
+      label: "Duplicatas a Receber"
+      # Totaliza ~300 subcontas de clientes (a vencer + vencidas).
+      # fev-26: 7.755.498  |  jan-26: 7.617.406
+      codigos: ["DUPLICATAS A RECEBER"]
+
+    adiantamentos:
+      label: "Adiantamentos"
+      # Adiantamentos a fornecedores e a empregados consolidados.
+      # fev-26: 384.225  |  jan-26: 341.189
+      codigos:
+        - "ADIANTAMENTOS A FORNECEDORES"
+        - "ADIANTAMENTOS A EMPREGADOS"
+
+    impostos_recuperar:
+      label: "Impostos a Recuperar"
+      # ICMS [330], PIS [331], COFINS [332] e outros impostos a compensar.
+      # fev-26: 111.837  |  jan-26: 101.366
+      codigos: ["IMPOSTOS A RECUPERAR/COMPENSAR"]
+
+    estoques:
+      label: "Estoques"
+      # Papel Branco, Papel Cinza, Fibra de Eucalipto, etc. +
+      # produtos em processo (em fabricação).
+      # fev-26: 713.229  |  jan-26: 1.464.171
+      codigos:
+        - "ESTOQUES"
+        - "PRODUTOS EM FABRICAÇÃO"
+
+  ativo_nao_circulante:
+
+    realizavel_lp:
+      label: "Realizável a Longo Prazo"
+      # Créditos com partes relacionadas, depósitos judiciais vinculados
+      # à RJ, créditos com terceiros e consórcios em andamento.
+      # fev-26: 3.688.126  |  jan-26: 3.718.986
+      codigos:
+        - "CRÉDITO COM PESSOAS LIGADAS"
+        - "DEPÓSITOS JUDICIAIS"
+        - "CRÉDITOS COM TERCEIROS"
+        - "CONSÓRCIOS"
+
+    investimentos:
+      label: "Investimento"
+      # Participações permanentes, incentivos fiscais, marcas/patentes,
+      # depósitos Eletrobrás.
+      # fev-26: 79.807  |  jan-26: 79.607
+      codigos: ["INVESTIMENTOS"]
+
+    imobilizado:
+      label: "Imobilizado"
+      # Valor líquido: Terrenos + Edifícios + Máquinas + Veículos +
+      # Móveis + Instalações + Ferramentas (-) Depreciações acumuladas.
+      # fev-26: 3.338.717  |  jan-26: 3.384.665
+      codigos: ["IMOBILIZADO"]
+
+  passivo_circulante:
+
+    fornecedores:
+      label: "Fornecedores"
+      # Fornecedores correntes (fora do plano de RJ).
+      # fev-26: 4.257.545  |  jan-26: 4.190.521
+      codigos: ["FORNECEDORES"]
+
+    emprestimos_financiamentos_cp:
+      label: "Empréstimos e Financiamentos"
+      # Parcelas de curto prazo de financiamentos bancários.
+      # fev-26: 257.031  |  jan-26: 257.031
+      codigos: ["FINANCIAMENTOS A CURTO PRAZO"]
+
+    obrigacoes_sociais_trabalhistas:
+      label: "Obrigações Sociais e Trabalhistas"
+      # Salários, INSS e FGTS a pagar + provisões de 13°, férias e
+      # encargos trabalhistas.
+      # Nome completo "SALÁRIOS E CONTRIBUIÇÕES A PAGAR" trunca a 30 chars.
+      # fev-26: 1.711.607  |  jan-26: 1.652.543
+      codigos:
+        - "SALÁRIOS E CONTRIBUIÇÕES A PAG"
+        - "PROVISÕES TRABALHISTAS"
+
+    obrigacoes_tributarias:
+      label: "Obrigações Tributárias"
+      # Saldo elevado (~R$13M) por débitos tributários acumulados na RJ:
+      # INSS Patronal, FGTS, ICMS, ISS, PIS, COFINS etc.
+      # fev-26: 13.454.312  |  jan-26: 13.282.369
+      codigos: ["IMPOSTOS E TAXAS A RECOLHER"]
+
+    outras_contas_pagar:
+      label: "Outras Contas a Pagar"
+      # Comissões de representantes/carreteiros, credores diversos,
+      # adiantamentos recebidos de clientes e operações de desconto
+      # de duplicatas (responsabilidade perante bancos).
+      # ATENÇÃO: "CREDORES DIVERSOS" aparece duas vezes no balancete —
+      # ambas no PC, soma intencional.
+      # fev-26: 5.753.835  |  jan-26: 5.612.230
+      codigos:
+        - "REPRESENTANTES/CARRETEIROS"
+        - "CREDORES DIVERSOS"
+        - "ADIANTAMENTOS DE CLIENTES"
+        - "DUPLICATAS DESCONTADAS"
+
+  passivo_nao_circulante:
+
+    emprestimos_financiamentos_lp:
+      label: "Empréstimos e Financiamentos"
+      # Parcelas de longo prazo de financiamentos bancários.
+      # fev-26: 3.799.600  |  jan-26: 3.674.600
+      codigos: ["FINANCIAMENTOS A LONGO PRAZO"]
+
+    debitos_pessoas_ligadas:
+      label: "Débitos com Pessoas Ligadas"
+      # fev-26: 491.417  |  jan-26: 491.417
+      codigos: ["DÉBITOS COM PESSOAS LIGADAS"]
+
+    parcelamentos_tributarios:
+      label: "Parcelamentos Tributários"
+      # Parcelamentos fiscais e previdenciários incluídos no plano de RJ.
+      # fev-26: 18.547.187  |  jan-26: 18.547.187
+      codigos: ["PARCELAMENTOS"]
+
+    fornecedores_rj_lp:
+      label: "Fornecedores RJ LP"
+      # Classes I, III e IV de credores quirografários do plano de RJ.
+      # Os três nomes truncam para o mesmo código de 30 chars:
+      #   "TITULARES DE CRÉDITOS QUIROGRAFÁRIOS-CLASSE I/III/IV"[:30]
+      #   → "TITULARES DE CRÉDITOS QUIROGRA"
+      # Um código captura as 3 classes → total consolidado ~R$16,2M.
+      # fev-26: 16.190.823  |  jan-26: 16.182.821
+      codigos: ["TITULARES DE CRÉDITOS QUIROGRA"]
+
+  patrimonio_liquido:
+
+    capital_social:
+      label: "Capital Social"
+      # "CAPITAL SOCIAL" tem dois níveis sintéticos com código idêntico
+      # → usar analítica [247] para evitar duplicação de valor.
+      # fev-26: 9.650.000  |  jan-26: 9.650.000
+      codigos: ["247"]
+
+    prejuizos_acumulados:
+      label: "Prejuízos Acumulados"
+      # Saldo DEVEDOR (déficit acumulado da empresa em RJ).
+      # sinal=-1: mapper entrega negativo; _display_grupo_bp mantém
+      # negativo para exibição correta no PL.
+      # fev-26: (57.589.023)  |  jan-26: (57.109.879)
+      codigos: ["LUCROS/PREJUIZOS ACUMULADOS"]
+      sinal: -1
+
+# ------------------------------------------------------------
+# DRE — ESTRUTURA
+# Pool (layout somar): balancete.contas (analíticas + sintéticas)
+# Prefixos inteiros (ex: "329") → match EXATO via _somar_mov_grupo.
+# Prefixos string (ex: "CUSTO DAS VENDAS") → startswith (únicas).
+# ------------------------------------------------------------
+dre_estrutura:
+
+  receita_bruta:
+    label: "Receita Bruta de Vendas"
+    tipo: receita
+    # Analítica [329] "Vendas a Prazo de Produtos" (CREDOR).
+    # Não usar sintética "RECEITAS OPERACIONAIS": aparece em dois níveis
+    # (bruta e líquida) com código idêntico → double-count.
+    prefixos: ["329"]
+
+  deducoes:
+    label: "(-) Deduções da Receita Bruta"
+    tipo: deducao
+    # Sintética "DEDUÇÕES DE VENDAS" (código único no balancete).
+    # Agrega: ICMS [337], PIS [340], COFINS [341], Canceladas [342].
+    prefixos: ["DEDUÇÕES DE VENDAS"]
+
+  custo:
+    label: "(-) Custo dos Produtos Vendidos"
+    tipo: custo
+    # Sintética "CUSTO DAS VENDAS" (única).
+    prefixos: ["CUSTO DAS VENDAS"]
+
+  despesas_administrativas:
+    label: "(-) Despesas Administrativas"
+    tipo: despesa
+    # Sintética "DESPESAS ADMINISTRATIVAS" (única).
+    prefixos: ["DESPESAS ADMINISTRATIVAS"]
+
+  despesas_comerciais:
+    label: "(-) Despesas Comerciais"
+    tipo: despesa
+    # Sintética "DESPESAS COMERCIAIS" (única).
+    prefixos: ["DESPESAS COMERCIAIS"]
+
+  despesas_financeiras:
+    label: "(-) Despesas Financeiras"
+    tipo: despesa_financeira
+    # Sintética "DESPESAS FINANCEIRAS" (única).
+    prefixos: ["DESPESAS FINANCEIRAS"]
+
+  receitas_financeiras:
+    label: "(+) Receitas Financeiras"
+    tipo: receita_financeira
+    # Não usar sintética "RECEITAS FINANCEIRAS": dois níveis → double-count.
+    # Analíticas individuais (match EXATO):
+    #   [345] Rendimentos de Aplicação  |  [346] Descontos Obtidos
+    prefixos: ["345", "346"]
