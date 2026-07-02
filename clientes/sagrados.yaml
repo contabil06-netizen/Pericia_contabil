@@ -3,142 +3,263 @@
 # CNPJ: 65.123.804/0001-23
 # Layout: CTC007 (sistema proprio, 9 colunas, codigo hierarquico)
 # Setor: Agroindustrial - Cafe (Matriz + Filial)
+# Status: Recuperacao Judicial (RJ) — integra o GRUPO SAGRADOS
+#         (demais CNPJs do grupo ainda sem YAML proprio)
+#
+# Reconciliado linha a linha contra:
+#   - BALANCETE ANALITICO - SAGRADOS FEVEREIRO 2026.pdf
+#   - BALANCETE ANALITICO - SAGRADOS JANEIRO 2026.pdf
+# Todos os grupos do Balanco batem ate o centavo com o RMA
+# comparativo fev-26/jan-26 fornecido (ver [V1] abaixo).
+# ============================================================
+#
+# PARTICULARIDADES DO BALANCETE SAGRADOS (CTC007):
+#   1. Colunas: Conta | C.Res | C.C | D/C | Nome | Saldo Anterior |
+#      Total Debito | Total Credito | Mov. Mensal | Saldo Atual
+#   2. Grupo 1 = Ativo, Grupo 2 = Passivo, Grupo 3 = Receitas,
+#      Grupo 4 = Despesas/Custos (grupo 5 nao usado neste cliente)
+#   3. Balancete SEM ENCERRAMENTO: contas de resultado (grupo 3/4)
+#      nao sao transferidas ao PL mensalmente — CLAUDE.md, secao
+#      "Balanco sem encerramento"
+#   4. Resultado do Periodo no BP e calculado pelo exporter
+#      (_construir_bp_yaml, linha "Resultado do Periodo"), NAO por
+#      um grupo YAML — nao mapear "Resultado do Exercicio" aqui
+#   5. RMA usa MOV. MENSAL para a coluna "Resultado Mensal" da DRE
+#      e SALDO ATUAL para a coluna "Resultado Acumulado"
+#   6. O exporter gera UMA LINHA POR CHAVE do dicionario "balanco"
+#      (core/exporter.py::_construir_bp_yaml) — grupos que devem
+#      aparecer como uma unica linha no RMA precisam estar
+#      consolidados em uma unica chave aqui (ver Adiantamentos e
+#      Obrigacoes Trabalhistas abaixo)
+#
+# ============================================================
+# CHECKLIST DE VALIDACAO PARA O COWORK
+# ============================================================
+#
+# [V1] EQUACAO PATRIMONIAL (balancete sem encerramento — CLAUDE.md)
+#      Ativo = Passivo + PL + Resultado do Periodo (acumulado)
+#      fev-26: Ativo 42.401.897,31 = PC 3.814.465,85 + PNC 228.272.456,43
+#              + PL -188.307.562,23 + Result.Acum -1.377.463,xx  (dif < R$1)
+#      jan-26: Ativo 42.556.063,18 = PC 3.747.355,36 + PNC 227.761.344,25
+#              + PL -188.307.562,23 + Result.Acum -645.074,xx    (dif < R$1)
+#
+# [V2] PARTIDAS DOBRADAS
+#      "Contas devedoras" == "Contas credoras" no rodape do PDF
+#      fev-26: 42.820.865,91 = 42.820.865,91
+#
+# [V3] ADIANTAMENTOS — grupo unico (2 contas somadas)
+#      1.1.02.02 (Fornecedores) + 1.1.02.03 (Funcionarios)
+#      fev-26: 6.230.423,64 + 3.860,12 = 6.234.283,76 (RMA: 6.234.284)
+#      jan-26: 6.217.890,15 + 8.737,95 = 6.226.628,10 (RMA: 6.226.628)
+#
+# [V4] OBRIGACOES TRABALHISTAS — grupo unico (4 contas somadas)
+#      2.1.05 + 2.1.06 + 2.1.09 (provisoes ferias/13o/INSS/FGTS) + 2.1.11
+#      fev-26: 70.730,01+28.389,87+115.588,76+356.999,62 = 571.708,26 (RMA: 571.708)
+#      jan-26: 72.715,81+25.863,58+116.606,93+268.455,62 = 483.641,94 (RMA: 483.642)
+#
+# [V5] EMPRESTIMOS E FINANCIAMENTOS LP — grupo unico (2 contas somadas)
+#      2.2.02 (Outras Obrig. NC + Mutuo) + 2.2.10 (Instituicoes Financeiras)
+#      fev-26: 328.803,53 + 226.992.955,98 = 227.321.759,51 (RMA: 227.321.760)
+#      jan-26: 306.691,00 + 226.503.956,33 = 226.810.647,33 (RMA: 226.810.647)
+#
+# [V6] FUNRURAL SOB JUDICE (passivo) x DEPOSITO JUDICIAL FUNRURAL (ativo)
+#      Sao DUAS contas distintas com saldo semelhante — nao confundir:
+#      - 2.2.01 (Passivo NC) = provisao do debito Funrural discutido = 950.696,92
+#      - 1.2.01.04.001 (Ativo NC, dentro de 1.2.01.04 Depositos Judiciais)
+#        = deposito judicial dado em garantia = 950.696,92
+#      Valores coincidem porque o deposito foi feito no valor integral
+#      do debito sub judice — confirmar com o AJ se ainda procede.
+#
+# [V7] CONTAS NOVAS NAO MAPEADAS
+#      Se o balancete de um mes futuro contiver prefixos 1.x/2.x fora
+#      dos listados abaixo, reportar ao perito: codigo, descricao,
+#      saldo e grupo sugerido — nao descartar silenciosamente.
+#
+# [V8] ANOMALIA CONHECIDA — Linha "09. Depreciacao/Amortizacao" da DRE
+#      No RMA fornecido, fev-26 e jan-26 mostram o MESMO valor (47.190)
+#      tanto na coluna mensal quanto na acumulada. Reconciliando com o
+#      balancete bruto:
+#        fev-26 (mov. mensal): 4.1.02.01.024 (47.153,67) + 4.1.02.01.038
+#          (2.159,84) + 4.8.12.01.024 (0,00, integralmente revertido) = 49.313,51
+#        jan-26 (mov. mensal): 47.165,93 + 2.159,84 + 0,00 = 49.325,77
+#      Nenhuma combinacao dos codigos abaixo reproduz 47.190 em nenhum
+#      dos dois meses, e o fato de MENSAL == ACUMULADO em ambos os
+#      periodos e tipico de referencia de celula fixa/cross-sheet
+#      (mesmo padrao de bug ja documentado para outro cliente na
+#      memoria do projeto). O EBITDA do RMA tambem nao fecha com
+#      "Resultado Operacional + Depreciacao" usando nenhum dos dois
+#      valores acima. Suspeita: bug no exporter (celula de depreciacao
+#      nao atualiza entre periodos), NAO erro de mapeamento YAML.
+#      Os prefixos abaixo mantêm a base contabil correta; NAO ajustar
+#      para forcar o valor 47.190 sem confirmar a causa raiz no codigo.
+#
 # ============================================================
 
 cliente: "Sagrados Coracoes Industria Com. Alimentos Ltda"
 cnpj: "65.123.804/0001-23"
 layout: "ctc007"
 
-# ------------------------------------------------------------
-# BALANCO PATRIMONIAL
-# ------------------------------------------------------------
 balanco:
 
   ativo_circulante:
 
     disponibilidades:
+      label: "Disponibilidades"
+      # fev-26: 412.984,35  |  jan-26: 441.037,32
       codigos: ["1.1.01"]
 
     clientes:
+      label: "Clientes"
+      # fev-26: 1.550.873,59  |  jan-26: 1.550.873,59 (sem mov.)
       codigos: ["1.1.02.01"]
 
-    adiantamentos_fornecedores:
-      codigos: ["1.1.02.02"]
-
-    adiantamentos_funcionarios:
-      codigos: ["1.1.02.03"]
-
-    outros_creditos_circulante:
-      codigos: ["1.1.02.04"]
+    adiantamentos:
+      label: "Adiantamentos"
+      # Fornecedores (1.1.02.02) + Funcionarios (1.1.02.03) — ver [V3]
+      # fev-26: 6.234.283,76  |  jan-26: 6.226.628,10
+      codigos: ["1.1.02.02", "1.1.02.03"]
 
     estoques:
+      label: "Estoques"
+      # fev-26: 1.796.808,96  |  jan-26: 1.796.808,96 (sem mov.)
       codigos: ["1.1.15"]
 
     impostos_a_recuperar:
+      label: "Impostos a Recuperar"
+      # ICMS, IR/CSLL, PIS/COFINS a recuperar
+      # fev-26: 3.079.240,37  |  jan-26: 3.099.259,91
       codigos: ["1.1.16"]
 
-    despesas_apropriar:
+    despesas_antecipadas:
+      label: "Despesas Antecipadas"
+      # fev-26: 541.926,65  |  jan-26: 551.812,16
       codigos: ["1.1.20"]
+
+    outros_creditos_circulante:
+      label: "Outras Contas a Receber"
+      # fev-26: 2.048.028,29  |  jan-26: 2.081.970,19
+      codigos: ["1.1.02.04"]
 
   ativo_nao_circulante:
 
-    realizavel_longo_prazo:
-      codigos: ["1.2.01"]
+    depositos_judiciais:
+      label: "Depósitos Judiciais"
+      # Inclui 1.2.01.04.001 (Funrural, 950.696,92) e 1.2.01.04.002
+      # (Bloqueio Judicial, 1.334.083,36) — ver [V6]
+      # fev-26: 2.284.780,28  |  jan-26: 2.284.780,28 (sem mov.)
+      codigos: ["1.2.01.04"]
 
     outros_valores_receber_lp:
-      codigos: ["1.2.05"]
+      label: "Outros Valores a Receber"
+      # Contratos de Mutuo (1.2.01.01) + Outros Valores a Receber (1.2.05)
+      # fev-26: 57.292,37 + 1.778.800,00 = 1.836.092,37
+      # jan-26: idem (sem mov.)
+      codigos: ["1.2.01.01", "1.2.05"]
+
+    investimentos:
+      label: "Investimento"
+      # Fundo de Investimentos em DI (aplicacoes de terceiros/garantias)
+      # fev-26: 10.781.111,18  |  jan-26: 10.781.111,18 (sem mov.)
+      codigos: ["1.2.01.05"]
 
     imobilizado:
+      label: "Imobilizado"
+      # Bens imoveis + maquinas + instalacoes + veiculos + moveis +
+      # informatica (-) depreciacao acumulada (1.2.03.09)
+      # fev-26: 11.814.169,91  |  jan-26: 11.881.931,68
       codigos: ["1.2.03"]
 
     intangivel:
+      label: "Intangível"
+      # Softwares (-) amortizacao acumulada
+      # fev-26: 21.597,60  |  jan-26: 23.757,44
       codigos: ["1.2.04"]
 
   passivo_circulante:
 
     fornecedores:
+      label: "Fornecedores"
+      # fev-26: 644.692,92  |  jan-26: 644.692,92 (sem mov.)
       codigos: ["2.1.01"]
 
     emprestimos_financiamentos_cp:
+      label: "Empréstimos e Financiamentos"
+      # Financiamentos (2.1.02) + ACC/Emprestimos Bancarios (2.1.03)
+      # fev-26: 1.568.303,66  |  jan-26: 1.568.303,66 (sem mov. liquido)
       codigos: ["2.1.02", "2.1.03"]
 
-    obrigacoes_pessoal:
-      codigos: ["2.1.05"]
-
-    obrigacoes_sociais:
-      codigos: ["2.1.06"]
+    obrigacoes_trabalhistas:
+      label: "Obrigações Trabalhistas"
+      # Pessoal (2.1.05) + Sociais (2.1.06) + Provisoes ferias/13o/INSS/
+      # FGTS (2.1.09) + Outras Provisoes/comissoes (2.1.11) — ver [V4]
+      # fev-26: 571.708,26  |  jan-26: 483.641,94
+      codigos: ["2.1.05", "2.1.06", "2.1.09", "2.1.11"]
 
     tributos_recolher:
+      label: "Obrigações Tributárias"
+      # fev-26: 458.000,82  |  jan-26: 464.543,61
       codigos: ["2.1.07"]
 
     outras_contas_pagar:
+      label: "Outras Contas a Pagar"
+      # fev-26: 571.760,19  |  jan-26: 586.173,23
       codigos: ["2.1.08"]
-
-    provisoes:
-      codigos: ["2.1.09", "2.1.11"]
 
   passivo_nao_circulante:
 
-    impostos_lp:
+    funrural_sob_judice:
+      label: "Funrural - Sob Judice"
+      # Provisao do debito de Funrural discutido judicialmente — ver [V6]
+      # fev-26: 950.696,92  |  jan-26: 950.696,92 (sem mov.)
       codigos: ["2.2.01"]
 
-    outros_lp:
-      codigos: ["2.2.02"]
-
     emprestimos_financiamentos_lp:
-      codigos: ["2.2.10"]
+      label: "Empréstimos e Financiamentos"
+      # Outras obrigacoes NC + mutuo (2.2.02) + instituicoes financeiras
+      # de longo prazo (2.2.10) — ver [V5]
+      # fev-26: 227.321.759,51  |  jan-26: 226.810.647,33
+      codigos: ["2.2.02", "2.2.10"]
 
   patrimonio_liquido:
 
     capital_social:
+      label: "Capital Social"
+      # fev-26 / jan-26: 17.000.000,00
       codigos: ["2.3.01"]
 
     ajustes_avaliacao_patrimonial:
+      label: "Ajuste de Avaliação Patrimonial"
+      # fev-26 / jan-26: 11.987.546,99
       codigos: ["2.3.03"]
 
     resultados_acumulados:
+      label: "Resultados Acumulados"
+      # Saldo ja negativo na origem (conta credora com natureza invertida
+      # por prejuizo historico) — sinal -1 conforme convencao do skill
+      # (SKILL-yaml-cliente.md: "prejuizo e devedor — entra negativo no PL")
+      # fev-26 / jan-26: -213.895.109,22
       codigos: ["2.3.04"]
       sinal: -1
 
     quotas_tesouraria:
+      label: "Cotas em Tesouraria"
+      # fev-26 / jan-26: -3.400.000,00
       codigos: ["2.3.06"]
       sinal: -1
 
-
-# ------------------------------------------------------------
-# ESTRUTURA DA DRE — FORMATO PADRAO 14 LINHAS
-#
-# Tipos simples:
-#   receita            -> sinal +  / acumula em acc["receita"]
-#   deducao            -> sinal -  / acumula em acc["deducao"]
-#   custo              -> sinal -  / acumula em acc["custo"]
-#   despesa            -> sinal -  / acumula em acc["despesa"]
-#   outra_receita      -> sinal +  / acumula em acc["outra_receita"]
-#   outra_despesa      -> sinal -  / acumula em acc["outra_despesa"]
-#   depreciacao        -> sinal +  / acumula em acc["depreciacao"]  (add-back EBITDA)
-#   receita_financeira -> sinal +  / acumula em acc["receita_financeira"]
-#   despesa_financeira -> sinal -  / acumula em acc["despesa_financeira"]
-#   provisao_ir        -> sinal -  / acumula em acc["provisao_ir"]
-#
-# Tipo agrupador:
-#   agrupador -> cabecalho pai + subgrupos aninhados
-#
-# Tipo subtotal:
-#   subtotal + formula -> linha calculada usando acumuladores
-# ------------------------------------------------------------
 dre_estrutura:
 
   receita_bruta:
     label: "01. Receita Bruta de Vendas"
     tipo: receita
     prefixos:
-      - "3.1.01.01"   # Receita de Vendas de Cafe - Mercado
+      - "3.1.01.01"
 
   deducoes:
     label: "02. (-) Deducoes da Receita Bruta"
     tipo: deducao
     prefixos:
-      - "3.1.01.03"   # Tributos s/ Vendas (ICMS)
+      - "3.1.01.03"
 
   rec_op_liq:
     label: "03. Receita Operacional Liquida"
@@ -152,16 +273,16 @@ dre_estrutura:
       custo_cafe_vendido:
         label: "    Custo do Cafe Vendido (CMV)"
         tipo: custo
-        sinal_acc: -1     # Conta CREDOR com saldo devedor (3.x contra-receita): _mov < 0, inverter para formula
+        sinal_acc: -1
         prefixos:
-          - "3.1.01.04"   # (-) Custo do Cafe Vendido - Mercado (5 segmentos: 3.1.01.04.001)
+          - "3.1.01.04"
       custos_producao:
         label: "    Custos Gerais de Producao"
         tipo: custo
         prefixos:
-          - "4.8.12"      # Custos Gerais de Producao
+          - "4.8.12"
         excluir_prefixos:
-          - "4.8.12.01.024"   # Depreciacao Producao — exibida somente no item 09
+          - "4.8.12.01.024"
 
   lucro_bruto:
     label: "05. Lucro (Prejuizo) Bruto"
@@ -176,24 +297,24 @@ dre_estrutura:
         label: "    06.1 Trabalhistas"
         tipo: despesa
         prefixos:
-          - "4.1.01"      # Salarios, INSS, FGTS, Ferias, Pro-labore, etc.
+          - "4.1.01"
       gerais_adm:
         label: "    06.2 Gerais e Administrativas"
         tipo: despesa
         prefixos:
-          - "4.1.02"      # Despesas Gerais (Deprec., Amort., Material, Viagens, etc.)
-          - "4.1.03"      # Utilidades (Telefone, Informatica, Seguros)
-          - "4.1.04"      # Despesas Eventuais
-          - "4.1.05"      # Servicos de Terceiros
-          - "4.1.06"      # Fretes e Carretos
-          - "4.1.07"      # Manutencao
-          - "4.1.08"      # Corretagens
-          - "4.1.09"      # Combustiveis
+          - "4.1.02"
+          - "4.1.03"
+          - "4.1.04"
+          - "4.1.05"
+          - "4.1.06"
+          - "4.1.07"
+          - "4.1.08"
+          - "4.1.09"
       tributarias:
         label: "    06.3 Tributarias"
         tipo: despesa
         prefixos:
-          - "4.1.11"      # Despesas Tributarias (PIS, COFINS, ICMS, ISS)
+          - "4.1.11"
 
   outras_rec_desp:
     label: "07. Outras Receitas/Despesas Operacionais"
@@ -203,12 +324,12 @@ dre_estrutura:
         label: "    Outras Receitas Operacionais"
         tipo: outra_receita
         prefixos:
-          - "3.5.01"      # Alugueis
+          - "3.5.01"
       outras_despesas:
         label: "    Outras Despesas"
         tipo: outra_despesa
         prefixos:
-          - "4.5.01"      # Perdas Diversas
+          - "4.5.01"
 
   resultado_op:
     label: "08. Resultado Operacional"
@@ -219,9 +340,9 @@ dre_estrutura:
     label: "09. (+) Depreciacao e Amortizacao"
     tipo: depreciacao
     prefixos:
-      - "4.1.02.01.024"   # Depreciacao (Despesas Gerais)
-      - "4.1.02.01.038"   # Amortizacao (Despesas Gerais)
-      - "4.8.12.01.024"   # Depreciacao (Custos Producao)
+      - "4.1.02.01.024"
+      - "4.1.02.01.038"
+      - "4.8.12.01.024"
 
   ebitda:
     label: "10. EBITDA"
@@ -236,12 +357,12 @@ dre_estrutura:
         label: "    Receitas Financeiras"
         tipo: receita_financeira
         prefixos:
-          - "3.4.01"      # Descontos Obtidos, Outras Rec. Financeiras, Var. Monetaria
+          - "3.4.01"
       despesas_fin:
         label: "    Despesas Financeiras"
         tipo: despesa_financeira
         prefixos:
-          - "3.4.02"      # Juros, IOF, Descontos Concedidos, Multas Tributarias
+          - "3.4.02"
 
   lucro_antes_ir:
     label: "12. Lucro (Prejuizo) Antes do IRPJ e CSLL"
@@ -251,7 +372,7 @@ dre_estrutura:
   provisao_ir:
     label: "13. (-) Provisao para IRPJ e CSLL"
     tipo: provisao_ir
-    prefixos: []    # Preencher quando houver conta especifica de provisao IR
+    prefixos: []
 
   lucro_liq:
     label: "14. Lucro (Prejuizo) Liquido do Periodo"
