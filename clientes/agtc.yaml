@@ -1,0 +1,427 @@
+# ============================================================
+# MAPA DE CONTAS — ARMAZENS GERAIS TRES CORACOES LTDA (AGTC)
+# CNPJ: 71.422.075/0001-09
+# Layout: CTC007 (mesmo sistema do Grupo Sagrados)
+# Setor: Armazem Geral — custodia de cafe de terceiros
+# Integra o GRUPO SAGRADOS (4 CNPJs no total; Sagrados Coracoes e
+# os outros 2 CNPJs ainda sem YAML proprio)
+#
+# Reconciliado linha a linha contra:
+#   - BALNCETE ANALITICO - AGTC JANEIRO 2026.pdf
+#   - BALANCETE ANALITICO - ARMAZENS FEVEREIRO 2026.pdf
+#   - BALANCETE ANALITICO - AGTC MARÇO 2026.pdf (usado so para confirmar
+#     a conta 2.1.02, zerada em jan/fev e com saldo em marco)
+# Grupamento final revisado e validado contra o RMA (BP + DRE) enviado
+# pelo perito para mar-26/fev-26. Todos os totais de secao batem
+# EXATOS (sem diferenca de centavo) — ver [V1]-[V6].
+# ============================================================
+#
+# DIFERENCAS ESTRUTURAIS RELEVANTES vs. clientes/sagrados.yaml
+# (mesmo grupo economico, mesmo sistema CTC007, plano de contas distinto):
+#
+#   1. AGTC e prestadora de SERVICO (armazenagem), nao vende mercadoria.
+#      Receita vem de "3.1.03 RECEITA PRESTACAO SERVICOS", nao de
+#      "3.1.01 VENDAS". NAO EXISTE conta de Custo de Mercadoria Vendida
+#      nem grupo "4.8" (Custos de Producao) — "01.1 Receita de Venda de
+#      Café" e "04.1 Custo do Café Vendido" ficam estruturalmente
+#      ZERADOS (mantidos no YAML so por consistencia de layout com as
+#      demais empresas do grupo — ver RMA enviado, que mostra essas
+#      sub-linhas zeradas explicitamente).
+#
+#   2. NAO existe conta "2.2.01" (Funrural) no Passivo Nao Circulante.
+#      O grupo bruto "2.2.02 Emprestimos e Financiamentos" NAO e uma
+#      linha unica no RMA — as subcontas tem natureza diferente e sao
+#      separadas em 3 linhas (Emprestimos e Financiamentos / Parcelamentos
+#      Tributarios / Outras Contas a Pagar) — ver secao passivo_nao_circulante.
+#
+#   3. NAO existe conta "2.3.03" (Ajuste de Avaliacao Patrimonial) no
+#      Patrimonio Liquido — a AGTC nunca reavaliou ativo imobilizado.
+#      PL da AGTC tem 3 linhas (Capital, Cotas Tesouraria, Resultados
+#      Acumulados), uma a menos que a Sagrados.
+#
+#   4. A conta "2.1.02" (Emprestimos e Financiamentos CP) existe no
+#      plano de contas mas estava ZERADA em jan/fev-26 — por isso nao
+#      apareceu na primeira leitura dos balancetes. Confirmada com
+#      saldo de R$633.933,10 em mar-26. Mantida no YAML mesmo com
+#      jan/fev = 0.
+#
+#   5. "Investimentos" fica em "1.2.02" (nao em "1.2.01.05" como na
+#      Sagrados) — codigo de grupo diferente, mesmo conceito.
+#
+#   6. NAO existe conta "1.2.05" — "Outros Valores a Receber" (LP) e
+#      so "1.2.01.01" (Contratos de Mutuo).
+#
+#   7. Existe conta "2.1.10 PROVISOES DE TRIBUTOS" que NAO tem
+#      equivalente na Sagrados. Dobrou como "Obrigacoes Tributarias"
+#      junto com "2.1.07" — ver [V4]. Mesma logica de consolidacao ja
+#      usada para "Obrigacoes Trabalhistas" (provisoes entram na conta
+#      principal do grupo).
+#
+#   8. Deducao da Receita Bruta (3.1.03.03, tributos s/ prestacao de
+#      servico: COFINS/PIS/ISS) e conta CREDOR com movimento devedor
+#      (contra-receita) — precisa de "inverte_credor: true" para o
+#      sinal ficar correto na formula "receita - deducao". A MESMA
+#      situacao existe em sagrados.yaml (grupo 3.1.01.03) mas nunca foi
+#      testada la porque o saldo sempre veio zero nos periodos
+#      revisados — SUGESTAO: aplicar "inverte_credor: true" tambem em
+#      sagrados.yaml quando essa conta tiver movimento real, para
+#      evitar o mesmo bug de sinal.
+#
+#   9. So existe 1 conta de depreciacao no P&L (4.1.02.01.024). Nao ha
+#      amortizacao de intangivel rodando (software 100% amortizado
+#      antes de jan-26, mov = 0,00 nos dois meses) nem depreciacao de
+#      producao (nao ha grupo 4.8).
+#
+# ============================================================
+# CHECKLIST DE VALIDACAO PARA O COWORK
+# ============================================================
+#
+# [V1] ATIVO CIRCULANTE — soma dos 7 grupos bate exato com o total do
+#      balancete bruto:
+#      fev-26: 502.396,48+383.093,21+25.352.782,47+2.030.433,90+
+#              586.547,06+80.558,45+13.124,58 = 28.948.936,15 (bruto: 28.948.936,15)
+#      jan-26: 471.037,97+375.810,34+34.059.570,55+2.032.565,82+
+#              587.152,07+80.558,45+11.424,58 = 37.618.119,78 (bruto: 37.618.119,78)
+#
+# [V2] ATIVO NAO CIRCULANTE — soma dos 5 grupos:
+#      fev-26: 280.744,94+28.101,55+744.499,49+1.954.333,22+525,00
+#              = 3.008.204,20 (bruto: 3.008.204,20)
+#      jan-26: idem (sem mov.) = 3.009.289,72 (bruto: 3.009.289,72)
+#
+# [V3] PASSIVO CIRCULANTE — soma dos 4 grupos (SEM emprestimos CP,
+#      ver diferenca estrutural #4):
+#      fev-26: 438.497,00+218.680,11+73.406,40+26.177.456,63
+#              = 26.908.040,14 (bruto: 26.908.040,14)
+#      jan-26: 438.497,00+172.619,30+44.267,25+34.959.489,16
+#              = 35.614.872,71 (bruto: 35.614.872,71)
+#
+# [V4] OBRIGACOES TRABALHISTAS (2.1.05+2.1.06+2.1.09+2.1.11) e
+#      OBRIGACOES TRIBUTARIAS (2.1.07+2.1.10) — confirmado que 2.1.10
+#      (Provisoes de Tributos) PRECISA entrar em algum grupo: sem ele
+#      a soma da secao Circulante fica R$28.462,31 (fev) e R$34.828,16
+#      (jan) abaixo do total do bruto. Alocado em "Obrigacoes
+#      Tributarias" por ser provisao de natureza tributaria (ISS/IRPJ/
+#      CSLL a pagar), analogo a como as provisoes trabalhistas (2.1.09)
+#      entram em "Obrigacoes Trabalhistas" na Sagrados.
+#
+# [V5] PASSIVO NAO CIRCULANTE E PL — batem exatos com grupo unico:
+#      PNC fev-26/jan-26: 2.2.02+2.2.10 = 6.714.109,32 (ambos os meses,
+#      bruto identico)
+#      PL fev-26/jan-26: 841.890,00-540.390,00-1.970.948,51
+#                        = -1.669.448,51 (ambos os meses, bruto identico)
+#
+# [V6] EQUACAO PATRIMONIAL (balancete sem encerramento)
+#      Ativo = Passivo + PL + Resultado do Periodo (acumulado)
+#      fev-26: 31.957.140,35 = 33.622.149,46 (26.908.040,14+6.714.109,32)
+#              -1.669.448,51 + 4.439,40 (result. acum.) = 31.957.140,35 ✓
+#      Resultado acumulado = Receitas(528.818,80) - Despesas(524.379,40)
+#      = 4.439,40 — confere com o gap da equacao patrimonial.
+#
+# [V7] CONTAS NOVAS NAO MAPEADAS
+#      Se balancete futuro trouxer prefixos fora dos listados, reportar
+#      ao perito: codigo, descricao, saldo, grupo sugerido — nao
+#      descartar silenciosamente.
+#
+# [V8] PROVISAO IRPJ/CSLL (conta 2.1.10.04, fev-26: R$745,82) NAO tem
+#      contrapartida de despesa localizada em nenhuma conta do grupo 4
+#      nos dois meses revisados. "provisao_ir" no dre_estrutura ficou
+#      com prefixos vazio (mesmo padrao da Sagrados) — se essa provisao
+#      se tornar recorrente/material, localizar a conta de despesa
+#      correspondente antes do proximo fechamento.
+#
+# ============================================================
+
+cliente: "Armazens Gerais Tres Coracoes Ltda"
+cnpj: "71.422.075/0001-09"
+layout: "ctc007"
+
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      label: "Disponibilidades"
+      # fev-26: 502.396,48  |  jan-26: 471.037,97
+      codigos: ["1.1.01"]
+
+    clientes:
+      label: "Clientes"
+      # fev-26: 383.093,21  |  jan-26: 375.810,34
+      codigos: ["1.1.02.01"]
+
+    estoques:
+      label: "Estoques"
+      # Estoque de terceiros em nosso poder (armazem geral) + estoque proprio
+      # fev-26: 25.352.782,47  |  jan-26: 34.059.570,55
+      codigos: ["1.1.15"]
+
+    adiantamentos:
+      label: "Adiantamentos"
+      # Fornecedores (1.1.02.02) + Funcionarios (1.1.02.03)
+      # fev-26: 2.016.511,79 + 13.922,11 = 2.030.433,90
+      # jan-26: 2.024.843,70 + 7.722,12 = 2.032.565,82
+      codigos: ["1.1.02.02", "1.1.02.03"]
+
+    impostos_a_recuperar:
+      label: "Impostos a Recuperar"
+      # fev-26: 586.547,06  |  jan-26: 587.152,07
+      codigos: ["1.1.16"]
+
+    despesas_antecipadas:
+      label: "Despesas Antecipadas"
+      # fev-26 / jan-26: 80.558,45 (sem mov.)
+      codigos: ["1.1.20"]
+
+    outros_creditos_circulante:
+      label: "Outras Contas a Receber"
+      # fev-26: 13.124,58  |  jan-26: 11.424,58
+      codigos: ["1.1.02.04"]
+
+  ativo_nao_circulante:
+
+    depositos_judiciais:
+      label: "Depósitos Judiciais"
+      # So ha "Bloqueio Judicial" (1.2.01.04.002) — sem Funrural aqui
+      # fev-26 / jan-26: 280.744,94 (sem mov.)
+      codigos: ["1.2.01.04"]
+
+    outros_valores_receber_lp:
+      label: "Outros Valores a Receber"
+      # So "Contratos de Mutuo" — nao existe conta 1.2.05 na AGTC
+      # fev-26 / jan-26: 28.101,55 (sem mov.)
+      codigos: ["1.2.01.01"]
+
+    investimentos:
+      label: "Investimentos"
+      # Codigo de grupo diferente da Sagrados: 1.2.02, nao 1.2.01.05
+      # fev-26 / jan-26: 744.499,49 (sem mov.)
+      codigos: ["1.2.02"]
+
+    imobilizado:
+      label: "Imobilizado"
+      # fev-26: 1.954.333,22  |  jan-26: 1.955.418,74
+      codigos: ["1.2.03"]
+
+    intangivel:
+      label: "Intangível"
+      # Marcas/Patentes (525,00) + Software liquido (100% amortizado = 0)
+      # fev-26 / jan-26: 525,00 (sem mov.)
+      codigos: ["1.2.04"]
+
+  passivo_circulante:
+
+    fornecedores:
+      label: "Fornecedores"
+      # fev-26 / jan-26: 438.497,00 (sem mov.)
+      codigos: ["2.1.01"]
+
+    emprestimos_financiamentos_cp:
+      label: "Empréstimos e Financiamentos"
+      # Conta 2.1.02 — zerada em jan/fev-26, aparece em mar-26 (633.933,10,
+      # confirmado no balancete de marco). Mantida no YAML mesmo com
+      # jan/fev = 0 para nao sumir quando o saldo aparecer.
+      codigos: ["2.1.02"]
+
+    obrigacoes_trabalhistas:
+      label: "Obrigações Trabalhistas"
+      # Pessoal (2.1.05) + Sociais (2.1.06) + Provisoes ferias/13o/INSS/
+      # FGTS (2.1.09) + Outras Provisoes (2.1.11)
+      # fev-26: 218.680,11  |  jan-26: 172.619,30
+      codigos: ["2.1.05", "2.1.06", "2.1.09", "2.1.11"]
+
+    tributos_recolher:
+      label: "Obrigações Tributárias"
+      # Tributos a Recolher (2.1.07) + Provisoes de Tributos (2.1.10,
+      # inclui provisao IRPJ/CSLL) — ver [V4]
+      # fev-26: 44.944,09 + 28.462,31 = 73.406,40
+      # jan-26: 9.439,09 + 34.828,16 = 44.267,25
+      codigos: ["2.1.07", "2.1.10"]
+
+    outras_contas_pagar:
+      label: "Outras Contas a Pagar"
+      # Inclui "Mercadorias de Terceiros" — contrapartida do estoque de
+      # terceiros custodiado (armazem geral)
+      # fev-26: 26.177.456,63  |  jan-26: 34.959.489,16
+      codigos: ["2.1.08"]
+
+  passivo_nao_circulante:
+
+    # ATENCAO: nao existe "Funrural - Sob Judice" no PNC da AGTC
+    # (diferenca estrutural #2). O grupo "2.2.02 Emprestimos e
+    # Financiamentos" do balancete bruto NAO e uma linha unica — as
+    # subcontas tem natureza economica diferente e o RMA as separa:
+    #   2.2.02.01 (Banco Daycoval)         -> Emprestimos e Financiamentos
+    #   2.2.02.03 (Impostos a pagar LP)     -> Parcelamentos Tributarios
+    #   2.2.10    (Outras Contas a Pagar)   -> Outras Contas a Pagar
+
+    emprestimos_financiamentos_lp:
+      label: "Empréstimos e Financiamentos"
+      # fev-26 / jan-26: 2.655.202,92 (sem mov.)
+      codigos: ["2.2.02.01"]
+
+    parcelamentos_tributarios:
+      label: "Parcelamentos Tributários"
+      # fev-26 / jan-26: 823.791,26 (sem mov.)
+      codigos: ["2.2.02.03"]
+
+    outras_contas_pagar_lp:
+      label: "Outras Contas a Pagar"
+      # fev-26 / jan-26: 3.235.115,14 (sem mov.)
+      codigos: ["2.2.10"]
+
+  patrimonio_liquido:
+
+    # ATENCAO: nao existe "Ajuste de Avaliacao Patrimonial" no PL da
+    # AGTC (diferenca estrutural #3) — PL tem 3 linhas, nao 4.
+
+    capital_social:
+      label: "Capital Social"
+      # fev-26 / jan-26: 841.890,00
+      codigos: ["2.3.01"]
+
+    quotas_tesouraria:
+      label: "Cotas em Tesouraria"
+      # fev-26 / jan-26: -540.390,00
+      codigos: ["2.3.06"]
+      sinal: -1
+
+    resultados_acumulados:
+      label: "Resultados Acumulados"
+      # fev-26 / jan-26: -1.970.948,51
+      codigos: ["2.3.04"]
+      sinal: -1
+
+dre_estrutura:
+
+  receita_bruta:
+    label: "01. Receita Bruta"
+    tipo: agrupador
+    subgrupos:
+      receita_cafe:
+        label: "    01.1 Receita de Venda de Café"
+        tipo: receita
+        prefixos: []   # AGTC nao vende cafe — mantido zerado por
+                        # consistencia de layout com a Sagrados
+      receita_servico:
+        label: "    01.2 Receita de Serviço"
+        tipo: receita
+        prefixos:
+          - "3.1.03.01"   # Prestacao de Servicos e Industrializacao (armazenagem)
+
+  deducoes:
+    label: "02. Dedução da Receita Bruta Serviços"
+    tipo: deducao
+    inverte_credor: true   # conta CREDOR com mov. devedor — ver diferenca #8
+    prefixos:
+      - "3.1.03.03"   # (-) Tributos s/ Prestacao de Servicos (COFINS/PIS/ISS)
+
+  rec_op_liq:
+    label: "03. Receita Operacional Liquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  custos_operacionais:
+    label: "04. Custos Operacionais"
+    tipo: agrupador
+    subgrupos:
+      custo_cafe_vendido:
+        label: "    Custo do Café Vendido"
+        tipo: custo
+        prefixos: []   # AGTC nao tem CMV/custo de producao — linha
+                        # zerada por consistencia de layout com a Sagrados
+
+  lucro_bruto:
+    label: "05. Lucro (Prejuizo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
+
+  despesas_operacionais:
+    label: "06. (-) Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      trabalhistas:
+        label: "    06.1 Trabalhistas"
+        tipo: despesa
+        prefixos:
+          - "4.1.01"
+      gerais_adm:
+        label: "    06.2 Gerais e Administrativas"
+        tipo: despesa
+        prefixos:
+          - "4.1.02"
+          - "4.1.03"
+          - "4.1.04"
+          - "4.1.05"
+          - "4.1.06"
+          - "4.1.07"
+          - "4.1.08"
+          - "4.1.09"
+      tributarias:
+        label: "    06.3 Tributarias"
+        tipo: tributaria    # bucket separado — ver formula do EBITDA
+        prefixos:
+          - "4.1.11"
+
+  outras_rec_desp:
+    label: "07. Outras Receitas/Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      outras_receitas:
+        label: "    Outras Receitas Operacionais"
+        tipo: outra_receita
+        prefixos:
+          - "3.5.01"
+      outras_despesas:
+        label: "    Outras Despesas"
+        tipo: outra_despesa
+        prefixos:
+          - "4.5.01"   # NAO CONFIRMADO — grupo 4.5 nao observado no COA da AGTC
+
+  resultado_op:
+    label: "08. Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
+
+  depreciacao:
+    label: "09. (+) Depreciacao e Amortizacao"
+    tipo: depreciacao
+    prefixos:
+      - "4.1.02.01.024"   # unica conta de depreciacao no P&L da AGTC —
+                           # ver diferenca #9 (sem amortizacao/producao)
+
+  ebitda:
+    label: "10. EBITDA"
+    tipo: subtotal
+    # Mesma formula confirmada para a Sagrados: Resultado Operacional +
+    # Depreciacao - Despesas Tributarias
+    formula: "resultado_op + depreciacao - tributaria"
+
+  rec_desp_fin:
+    label: "11. Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+      receitas_fin:
+        label: "    Receitas Financeiras"
+        tipo: receita_financeira
+        prefixos:
+          - "3.4.01"
+      despesas_fin:
+        label: "    Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "3.4.02"
+
+  lucro_antes_ir:
+    label: "12. Lucro (Prejuizo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "resultado_op + receita_financeira - despesa_financeira"
+
+  provisao_ir:
+    label: "13. (-) Provisao para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []   # ver [V8] — contrapartida de despesa nao localizada
+
+  lucro_liq:
+    label: "14. Lucro (Prejuizo) Liquido do Periodo"
+    tipo: subtotal
+    formula: "resultado_op + receita_financeira - despesa_financeira - provisao_ir"

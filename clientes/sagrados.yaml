@@ -75,23 +75,34 @@
 #      dos listados abaixo, reportar ao perito: codigo, descricao,
 #      saldo e grupo sugerido — nao descartar silenciosamente.
 #
-# [V8] ANOMALIA CONHECIDA — Linha "09. Depreciacao/Amortizacao" da DRE
-#      No RMA fornecido, fev-26 e jan-26 mostram o MESMO valor (47.190)
-#      tanto na coluna mensal quanto na acumulada. Reconciliando com o
-#      balancete bruto:
-#        fev-26 (mov. mensal): 4.1.02.01.024 (47.153,67) + 4.1.02.01.038
-#          (2.159,84) + 4.8.12.01.024 (0,00, integralmente revertido) = 49.313,51
-#        jan-26 (mov. mensal): 47.165,93 + 2.159,84 + 0,00 = 49.325,77
-#      Nenhuma combinacao dos codigos abaixo reproduz 47.190 em nenhum
-#      dos dois meses, e o fato de MENSAL == ACUMULADO em ambos os
-#      periodos e tipico de referencia de celula fixa/cross-sheet
-#      (mesmo padrao de bug ja documentado para outro cliente na
-#      memoria do projeto). O EBITDA do RMA tambem nao fecha com
-#      "Resultado Operacional + Depreciacao" usando nenhum dos dois
-#      valores acima. Suspeita: bug no exporter (celula de depreciacao
-#      nao atualiza entre periodos), NAO erro de mapeamento YAML.
-#      Os prefixos abaixo mantêm a base contabil correta; NAO ajustar
-#      para forcar o valor 47.190 sem confirmar a causa raiz no codigo.
+# [V8] FORMULA DO EBITDA — confirmada pelo modelo Excel (celula = D18+D19-D14)
+#      EBITDA = Resultado Operacional (08.) + Depreciacao/Amortizacao (09.)
+#               - Despesas Tributarias (06.3)
+#      Por isso "tributarias" usa tipo: tributaria (bucket separado de
+#      "despesa" em core/exporter.py::_TIPO_SINAL) em vez de tipo: despesa —
+#      senao a formula do EBITDA nao teria como referenciar so essa linha.
+#      "resultado_op" foi ajustado para subtrair "tributaria" explicitamente,
+#      ja que ela saiu do acumulador "despesa".
+#
+#
+# [V9] PLANO DE CONTAS DE DEPRECIACAO/AMORTIZACAO — conferido em TODOS os
+#      balancetes disponiveis (dez/25 a abr/26). So existem 3 contas:
+#        4.1.02.01.024  DEPRECIACAO (Despesas Gerais)      — varia todo mes
+#        4.1.02.01.038  AMORTIZACAO (Despesas Gerais)      — fixo 2.159,84/mes
+#        4.8.12.01.024  DEPRECIACAO (Custos de Producao)   — debito=credito
+#                       todo mes (revertida no mesmo mes) => mov liquido SEMPRE 0,00
+#      Os 3 prefixos do grupo "depreciacao" abaixo JA cobrem 100% do plano
+#      de contas real — nao ha quarta conta nem grupo alternativo. Mov.
+#      mensal de 4.1.02.01.024 (a unica que realmente varia):
+#        dez-25: 47.189,89 | jan-26: 47.165,93 | fev-26: 47.153,67
+#        mar-26: 47.120,25 | abr-26: 47.120,25
+#      O "47.190" fixo na linha "09." do RMA (identico em jan-26 E fev-26)
+#      bate quase exato com DEZEMBRO/25 (47.189,89 arredonda p/ 47.190) e
+#      com NENHUM outro mes — evidencia forte de celula do Excel travada
+#      no valor de dez/25 em vez de puxar o mov. mensal de cada periodo.
+#      Confirmado: nao e erro de mapeamento no YAML (o plano de contas
+#      esta corretamente coberto) — e bug de referencia de celula fora
+#      deste arquivo, no exporter ou no modelo Excel gerado.
 #
 # ============================================================
 
@@ -113,16 +124,16 @@ balanco:
       # fev-26: 1.550.873,59  |  jan-26: 1.550.873,59 (sem mov.)
       codigos: ["1.1.02.01"]
 
+    estoques:
+      label: "Estoques"
+      # fev-26: 1.796.808,96  |  jan-26: 1.796.808,96 (sem mov.)
+      codigos: ["1.1.15"]
+
     adiantamentos:
       label: "Adiantamentos"
       # Fornecedores (1.1.02.02) + Funcionarios (1.1.02.03) — ver [V3]
       # fev-26: 6.234.283,76  |  jan-26: 6.226.628,10
       codigos: ["1.1.02.02", "1.1.02.03"]
-
-    estoques:
-      label: "Estoques"
-      # fev-26: 1.796.808,96  |  jan-26: 1.796.808,96 (sem mov.)
-      codigos: ["1.1.15"]
 
     impostos_a_recuperar:
       label: "Impostos a Recuperar"
@@ -177,16 +188,16 @@ balanco:
 
   passivo_circulante:
 
-    fornecedores:
-      label: "Fornecedores"
-      # fev-26: 644.692,92  |  jan-26: 644.692,92 (sem mov.)
-      codigos: ["2.1.01"]
-
     emprestimos_financiamentos_cp:
       label: "Empréstimos e Financiamentos"
       # Financiamentos (2.1.02) + ACC/Emprestimos Bancarios (2.1.03)
       # fev-26: 1.568.303,66  |  jan-26: 1.568.303,66 (sem mov. liquido)
       codigos: ["2.1.02", "2.1.03"]
+
+    fornecedores:
+      label: "Fornecedores"
+      # fev-26: 644.692,92  |  jan-26: 644.692,92 (sem mov.)
+      codigos: ["2.1.01"]
 
     obrigacoes_trabalhistas:
       label: "Obrigações Trabalhistas"
@@ -227,6 +238,12 @@ balanco:
       # fev-26 / jan-26: 17.000.000,00
       codigos: ["2.3.01"]
 
+    quotas_tesouraria:
+      label: "Cotas em Tesouraria"
+      # fev-26 / jan-26: -3.400.000,00
+      codigos: ["2.3.06"]
+      sinal: -1
+
     ajustes_avaliacao_patrimonial:
       label: "Ajuste de Avaliação Patrimonial"
       # fev-26 / jan-26: 11.987.546,99
@@ -239,12 +256,6 @@ balanco:
       # (SKILL-yaml-cliente.md: "prejuizo e devedor — entra negativo no PL")
       # fev-26 / jan-26: -213.895.109,22
       codigos: ["2.3.04"]
-      sinal: -1
-
-    quotas_tesouraria:
-      label: "Cotas em Tesouraria"
-      # fev-26 / jan-26: -3.400.000,00
-      codigos: ["2.3.06"]
       sinal: -1
 
 dre_estrutura:
@@ -312,7 +323,8 @@ dre_estrutura:
           - "4.1.09"
       tributarias:
         label: "    06.3 Tributarias"
-        tipo: despesa
+        tipo: tributaria    # bucket separado (core/exporter.py _TIPO_SINAL) —
+                             # necessario para o EBITDA subtrair so esta linha
         prefixos:
           - "4.1.11"
 
@@ -334,7 +346,9 @@ dre_estrutura:
   resultado_op:
     label: "08. Resultado Operacional"
     tipo: subtotal
-    formula: "receita - deducao - custo - despesa + outra_receita - outra_despesa"
+    # tributaria entra separado de despesa (ver tipo: tributaria acima) —
+    # precisa ser somada aqui explicitamente para nao sumir do 08.
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
 
   depreciacao:
     label: "09. (+) Depreciacao e Amortizacao"
@@ -347,7 +361,10 @@ dre_estrutura:
   ebitda:
     label: "10. EBITDA"
     tipo: subtotal
-    formula: "resultado_op + depreciacao"
+    # Formula real do modelo Excel da Sagrados (celula EBITDA = D18+D19-D14,
+    # onde D18=Resultado Operacional, D19=Depreciacao, D14=06.3 Tributarias):
+    # EBITDA = Resultado Operacional + Depreciacao - Despesas Tributarias
+    formula: "resultado_op + depreciacao - tributaria"
 
   rec_desp_fin:
     label: "11. Receitas (Despesas) Financeiras"

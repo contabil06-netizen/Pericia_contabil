@@ -1,0 +1,425 @@
+# ============================================================
+# MAPA DE CONTAS — KAERPEN ALIMENTOS LTDA (EM RECUPERACAO JUDICIAL)
+# CNPJ: 34.786.740/0001-17
+# Layout: socium (5 niveis hierarquicos, sufixo D/C no valor)
+# Setor: Industria de Alimentos
+# Integra o GRUPO SAGRADOS (4 CNPJs no total)
+#
+# ============================================================
+# ATENCAO — BUG DE EXTRACAO CONHECIDO (NAO E PROBLEMA DESTE YAML)
+# ============================================================
+# O PDF da Kaerpen tem um defeito de geracao: em ~metade das linhas
+# (destaque/negrito — cabecalhos de grupo E TAMBEM contas analiticas
+# reais, ex: "BANCO DAYCOVAL 740864-3"), duas camadas de texto se
+# sobrepoem no mesmo x/y. O `pdfplumber.extract_text()` usado em
+# core/parsers.py::BaseParser._extrair_texto_paginas() le essas linhas
+# embaralhadas (ex: "ATIVO2 C1.I1RCULANTE ATIVO CIRCULANTE..." em vez
+# de "2 1.1 ATIVO CIRCULANTE..."). Como ParserSocium.RE_LINHA exige
+# que a linha comece com digito, essas linhas NAO BATEM NO REGEX e sao
+# descartadas silenciosamente — ha perda real de contas, nao so de
+# subtotais.
+#
+# Os dados abaixo foram extraidos com um script auxiliar (filtro por
+# fonte dominante de cada linha, ja que as duas camadas usam tamanhos
+# de fonte diferentes) — NAO esta implementado em core/parsers.py.
+# Sem correcao la, processar a Kaerpen pelo main.py perde contas.
+# PENDENTE: aplicar o mesmo filtro (ou equivalente) em ParserSocium
+# antes de rodar esta empresa em producao.
+# ============================================================
+#
+# DIFERENCAS ESTRUTURAIS RELEVANTES vs. sagrados.yaml / agtc.yaml
+# (layout Socium, nao CTC007 — plano de contas com numeracao diferente):
+#
+#   1. Numeracao de grupo INVERTIDA: grupo 3 = DESPESAS, grupo 4 =
+#      RECEITAS (Sagrados/AGTC: 3=receita, 4=despesa). Existe ainda um
+#      grupo 5 = CUSTOS separado (CMV + custos de producao), que na
+#      Sagrados fica embutido dentro do grupo 4 (despesas).
+#
+#   2. PL tem so 2 linhas (Capital Social + Resultados Acumulados) —
+#      sem Cotas em Tesouraria, sem Ajuste de Avaliacao Patrimonial.
+#
+#   3. NAO existe grupo "Investimentos" no Ativo Nao Circulante.
+#
+#   4. Existe categoria nova sem equivalente em Sagrados/AGTC:
+#      "1.1.05 IMOVEIS DESTINADOS A VENDA" (R$1.560.000,00, relevante)
+#      — mapeada como grupo proprio no Ativo Circulante.
+#
+#   5. Passivo Nao Circulante nao tem conta de emprestimo bancario
+#      tradicional — e composto por Parcelamentos Tributarios (2.2.02),
+#      Outras Obrigacoes/debitos com terceiros (2.2.04) e Obrigacoes
+#      com Mutuo — provavelmente credito de socios/partes relacionadas
+#      (2.2.05).
+#
+#   6. "Empréstimos e Financiamentos" (2.1.02, circulante) existe no
+#      plano de contas mas estava ZERADO em fev-26 (tinha saldo em
+#      jan-26: R$10.280,21C, quitado durante fevereiro). Mantido no
+#      YAML mesmo com fev=0.
+#
+#   7. Grupo 5.2.01.04 "GASTOS GERAIS DE FABRICACAO" NAO entra em
+#      Custos Operacionais (04.) — por instrucao direta do perito,
+#      entra em "06.2 Gerais e Administrativas" junto com Despesas
+#      Gerais Administrativas (3.2.02.03) e Despesas Gerais Comerciais
+#      (3.2.01.03). Custos Operacionais (04.) fica só com CMV (5.1) +
+#      Mao de Obra Direta (5.2.01.03).
+#
+#   8. Deducao da Receita Bruta (4.1.02) e conta DEVEDOR direta (sem
+#      necessidade de inverte_credor, ao contrario da AGTC) — a
+#      natureza ja vem correta do proprio balancete.
+#
+#   9. Grupo "3.2.04 Outras Despesas Operacionais" e, na pratica,
+#      100% Depreciacao/Amortizacao (unica subconta: 3.2.04.01.0004).
+#      Mapeado direto na linha "09.", NAO em "07.2 Outras Despesas"
+#      (senao contaria a depreciacao duas vezes).
+#
+#  10. NAO encontrei conta de "Receitas Financeiras" (grupo 4) nos
+#      balancetes revisados — so ha Despesas Financeiras (3.3.02).
+#      "receitas_fin" ficou com prefixos vazio.
+#
+#  11. RESOLVIDO: "3.2.02.04 Despesas Indedutiveis" (R$1.451,00, fev) —
+#      confirmado pelo perito: soma-se a Depreciacao/Amortizacao e ambas
+#      sao evidenciadas juntas em "07.2 Outras Despesas" (32.794,03 =
+#      31.343,03 deprec. + 1.451,00 indedutiveis, bate exato contra a
+#      tabela mar-26/fev-26 fornecida). A Depreciacao continua isolada
+#      em "09." (31.343,03) apenas para o add-back do EBITDA.
+#
+#  11b. RESOLVIDO/CONFIRMADO: formula do EBITDA corrigida para
+#       "resultado_op + depreciacao + tributaria" ("+", nao "-") —
+#       ver comentario no bloco `ebitda` abaixo. O sinal "-" (usado em
+#       sagrados.yaml/agtc.yaml, replicando =D18+D19-D14 do Excel)
+#       so funciona se a celula D14 do Excel ja for o valor EXIBIDO
+#       (negativo). Contra o acumulador `acc['tributaria']` deste YAML
+#       (bruto, positivo), o sinal correto e "+". PENDENTE: confirmar
+#       se sagrados.yaml/agtc.yaml tambem precisam desta correcao —
+#       nao alterados aqui sem autorizacao explicita.
+#
+#  12. NAO CONFIRMADO: layout de "01. Receita Bruta" e "04. Custos
+#      Operacionais" ficou como grupo simples (nao agrupador com
+#      sub-linha "Café" zerada, como em sagrados.yaml/agtc.yaml),
+#      porque a Kaerpen fabrica alimentos em geral, nao cafe — nao
+#      tenho imagem de referencia do RMA da Kaerpen para confirmar se
+#      o padrao visual do grupo exige a mesma estrutura de agrupador.
+#
+# ============================================================
+# CHECKLIST DE VALIDACAO PARA O COWORK
+# ============================================================
+#
+# [V1] ATIVO CIRCULANTE — soma dos 7 grupos bate exato com o bruto
+#      (extraido com o script auxiliar, ver nota do bug acima):
+#      fev-26: -15.205,04(disponib., credor) +499.095,67+1.543.550,08+
+#              185.520,64+169.831,01+1.560.000,00+277.368,64
+#              = 4.220.161,00 (bruto: 4.220.161,00)
+#
+# [V2] ATIVO NAO CIRCULANTE — soma dos 4 grupos:
+#      fev-26: 257.147,32+2.256.526,81+0,00+503.698,95
+#              = 3.017.373,08 (bruto: 3.017.373,08)
+#
+# [V3] PASSIVO CIRCULANTE — soma dos 5 grupos:
+#      fev-26: 333.606,12+0,00+133.427,77+46.457,26+217.735,63
+#              = 731.226,78 (bruto: 731.226,78)
+#
+# [V4] PASSIVO NAO CIRCULANTE — soma dos 3 grupos:
+#      fev-26: 415.760,80+3.781.318,52+21.020,55
+#              = 4.218.099,87 (bruto: 4.218.099,87)
+#
+# [V5] PATRIMONIO LIQUIDO:
+#      fev-26: 3.430.000,00-1.051.554,94 = 2.378.445,06 (bruto: 2.378.445,06)
+#
+# [V6] EQUACAO PATRIMONIAL (balancete sem encerramento anual — mesma
+#      logica da Sagrados/AGTC, apesar do grupo 3/4/5 aqui exibir
+#      Saldo Anterior = 0,00 todo mes — e so convencao de exibicao do
+#      layout Socium, o fechamento contabil continua sendo anual)
+#      fev-26: Ativo 7.237.534,08 = Passivo(731.226,78+4.218.099,87)
+#              + PL(2.378.445,06) - Resultado do Mes(90.237,63,
+#              prejuizo) = 7.327.771,71 - 90.237,63 = 7.237.534,08 ✓
+#      Resultado do mes confere com RESUMO DO BALANCETE do proprio PDF
+#      ("RESULTADO DO MES ... 90.237,63D").
+#
+# [V7] CONTAS NOVAS NAO MAPEADAS — se balancete futuro trouxer
+#      prefixos fora dos listados, reportar ao perito antes de
+#      descartar.
+#
+# [V8] DRE — validado item a item contra a tabela mar-26/fev-26 fornecida
+#      pelo perito (valores brutos, arredondados a unidade):
+#      fev-26: 01=530.100 02=(54.418) 03=475.682 04=(392.536) 05=83.146
+#              06=(133.598) [06.1=(24.431) 06.2=(107.769) 06.3=(1.398)]
+#              07=(32.791) [07.1=3 07.2=(32.794)] 08=(83.243)
+#              09=31.343 10=(50.502) 11=(6.995) 12=(90.238) 14=(90.238)
+#      Todas as linhas batem exato (ou com diferenca de arredondamento
+#      de unidade, esperada pois a tabela de referencia nao traz centavos).
+#
+# ============================================================
+
+cliente: "Kaerpen Alimentos Ltda"
+cnpj: "34.786.740/0001-17"
+layout: "socium"
+
+balanco:
+
+  ativo_circulante:
+
+    disponibilidades:
+      label: "Disponibilidades"
+      # Conta credora em fev-26 (cheque especial/descoberto bancario)
+      # fev-26: -15.205,04 (credor)
+      codigos: ["1.1.01"]
+
+    clientes:
+      label: "Clientes"
+      # fev-26: 499.095,67
+      codigos: ["1.1.02.01"]
+
+    estoques:
+      label: "Estoques"
+      # Fabrica de Alimentos + Terceiros p/ Industrializacao + Poder de Terceiros
+      # fev-26: 1.543.550,08
+      codigos: ["1.1.03"]
+
+    adiantamentos:
+      label: "Adiantamentos"
+      # Fornecedores (1.1.02.02) + Funcionarios (1.1.02.03)
+      # fev-26: 185.520,64 + 0,00 = 185.520,64
+      codigos: ["1.1.02.02", "1.1.02.03"]
+
+    impostos_a_recuperar:
+      label: "Impostos a Recuperar"
+      # fev-26: 169.831,01
+      codigos: ["1.1.04"]
+
+    imoveis_destinados_venda:
+      label: "Imóveis Destinados a Venda"
+      # Categoria sem equivalente na Sagrados/AGTC — ver diferenca #4
+      # fev-26: 1.560.000,00 (sem mov.)
+      codigos: ["1.1.05"]
+
+    despesas_antecipadas:
+      label: "Despesas Antecipadas"
+      # fev-26: 277.368,64 (sem mov.)
+      codigos: ["1.1.06"]
+
+  ativo_nao_circulante:
+
+    depositos_judiciais:
+      label: "Depósitos Judiciais"
+      # So ha "Bloqueio Judicial" — sem Funrural
+      # fev-26: 257.147,32 (sem mov.)
+      codigos: ["1.2.01.03"]
+
+    outros_valores_receber_lp:
+      label: "Outros Valores a Receber"
+      # fev-26: 503.698,95 (sem mov.)
+      codigos: ["1.2.05"]
+
+    imobilizado:
+      label: "Imobilizado"
+      # fev-26: 2.256.526,81
+      codigos: ["1.2.03"]
+
+    intangivel:
+      label: "Intangível"
+      # Software 100% amortizado — liquido = 0
+      # fev-26: 0,00
+      codigos: ["1.2.04"]
+
+  passivo_circulante:
+
+    fornecedores:
+      label: "Fornecedores"
+      # fev-26: 333.606,12
+      codigos: ["2.1.01"]
+
+    emprestimos_financiamentos_cp:
+      label: "Empréstimos e Financiamentos"
+      # Conta 2.1.02 — zerada em fev-26, tinha saldo em jan-26
+      # (10.280,21C, quitada no mes). Mantida mesmo com fev = 0.
+      codigos: ["2.1.02"]
+
+    obrigacoes_trabalhistas:
+      label: "Obrigações Trabalhistas"
+      # Obrigacoes com Pessoal (2.1.03) + Obrigacoes Sociais e
+      # Trabalhistas (2.1.04)
+      # fev-26: 99.130,65 + 34.297,12 = 133.427,77
+      codigos: ["2.1.03", "2.1.04"]
+
+    tributos_recolher:
+      label: "Obrigações Tributárias"
+      # fev-26: 46.457,26
+      codigos: ["2.1.05"]
+
+    outras_contas_pagar:
+      label: "Outras Contas a Pagar"
+      # Contas/Titulos a Pagar + Estoque a Industrializar (2.1.06.02)
+      # fev-26: 217.735,63
+      codigos: ["2.1.06"]
+
+  passivo_nao_circulante:
+
+    parcelamentos_tributarios:
+      label: "Parcelamentos Tributários"
+      # fev-26: 415.760,80
+      codigos: ["2.2.02"]
+
+    outras_contas_pagar_lp:
+      label: "Outras Contas a Pagar"
+      # Inclui "Fornecedores a Pagar" + "Debitos com Terceiros"
+      # (partes relacionadas) — ver diferenca #5
+      # fev-26: 3.781.318,52 (sem mov.)
+      codigos: ["2.2.04"]
+
+    obrigacoes_mutuo:
+      label: "Obrigações com Mútuo"
+      # NAO CONFIRMADO — pode precisar ser consolidada com "Outras
+      # Contas a Pagar (LP)" acima; mantida separada ate confirmacao
+      # fev-26: 21.020,55 (sem mov.)
+      codigos: ["2.2.05"]
+
+  patrimonio_liquido:
+
+    capital_social:
+      label: "Capital Social"
+      # fev-26: 3.430.000,00 (sem mov.)
+      codigos: ["2.3.01"]
+
+    resultados_acumulados:
+      label: "Resultados Acumulados"
+      # fev-26: -1.051.554,94
+      codigos: ["2.3.04"]
+      sinal: -1
+
+dre_estrutura:
+
+  receita_bruta:
+    label: "01. Receita Bruta"
+    tipo: receita
+    prefixos:
+      - "4.1.01.01"   # Receita Bruta Vendas no Pais
+
+  deducoes:
+    label: "02. Dedução da Receita Bruta"
+    tipo: deducao
+    # SEM inverte_credor — natureza ja vem DEVEDOR direto no balancete
+    # (diferenca #8, ao contrario da AGTC)
+    prefixos:
+      - "4.1.02"   # Impostos sobre Vendas e Servicos (liquido do incentivo ICMS)
+
+  rec_op_liq:
+    label: "03. Receita Operacional Liquida"
+    tipo: subtotal
+    formula: "receita - deducao"
+
+  custos_operacionais:
+    label: "04. Custos Operacionais"
+    tipo: custo
+    # CMV/Produtos Fabricados (5.1) + Mao de Obra Direta (5.2.01.03).
+    # Gastos Gerais de Fabricacao (5.2.01.04) NAO entra aqui — vai
+    # para "06.2 Gerais e Administrativas" por instrucao do perito.
+    prefixos:
+      - "5.1"
+      - "5.2.01.03"
+
+  lucro_bruto:
+    label: "05. Lucro (Prejuizo) Bruto"
+    tipo: subtotal
+    formula: "receita - deducao - custo"
+
+  despesas_operacionais:
+    label: "06. Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      trabalhistas:
+        label: "    06.1 Trabalhistas"
+        tipo: despesa
+        prefixos:
+          - "3.2.02.01"   # Despesas Trabalhistas (administrativas)
+          - "3.2.02.02"   # Encargos Sociais (administrativos)
+      gerais_adm:
+        label: "    06.2 Gerais e Administrativas"
+        tipo: despesa
+        # Confirmado pelo perito: Despesas Gerais Administrativas +
+        # Gastos Gerais de Fabricacao + Despesas Gerais Comerciais
+        prefixos:
+          - "3.2.02.03"   # Despesas Gerais Administrativas
+          - "5.2.01.04"   # Gastos Gerais de Fabricacao
+          - "3.2.01.03"   # Despesas Gerais Comerciais
+      tributarias:
+        label: "    06.3 Tributarias"
+        tipo: tributaria    # bucket separado — ver formula do EBITDA
+        prefixos:
+          - "3.2.03"   # Despesas Tributarias (Impostos, Taxas e Contribuicoes)
+
+  outras_rec_desp:
+    label: "07. Outras Receitas/Despesas Operacionais"
+    tipo: agrupador
+    subgrupos:
+      outras_receitas:
+        label: "    Outras Receitas Operacionais"
+        tipo: outra_receita
+        prefixos:
+          - "4.1.03"   # Brindes e Amostras
+      outras_despesas:
+        label: "    Outras Despesas"
+        tipo: outra_despesa
+        # Confirmado pelo perito: Depreciacao/Amortizacao (3.2.04.01.0004)
+        # + Despesas Indedutiveis (3.2.02.04) somadas nesta linha (07.2).
+        # A Depreciacao aparece DE NOVO isolada em "09." — nao e duplicidade
+        # de deducao no Resultado Operacional, e apenas o valor de
+        # depreciacao usado como referencia p/ o add-back do EBITDA
+        # (a formula de "08. Resultado Operacional" nao referencia
+        # "depreciacao", so "outra_despesa").
+        prefixos:
+          - "3.2.04.01.0004"   # Depreciacoes e Amortizacoes
+          - "3.2.02.04"        # Despesas Indedutiveis
+
+  resultado_op:
+    label: "08. Resultado Operacional"
+    tipo: subtotal
+    formula: "receita - deducao - custo - despesa - tributaria + outra_receita - outra_despesa"
+
+  depreciacao:
+    label: "09. (+) Depreciacao e Amortizacao"
+    tipo: depreciacao
+    prefixos:
+      - "3.2.04.01.0004"   # Unica conta do grupo "Outras Despesas
+                            # Operacionais" (3.2.04) — ver diferenca #9
+
+  ebitda:
+    label: "10. EBITDA"
+    tipo: subtotal
+    # "+ tributaria" (nao "-"): acc['tributaria'] guarda o movimento BRUTO
+    # positivo (ver core/exporter.py::_acc_estrutura, tipo != agrupador/
+    # subtotal acumula raw, sem multiplicar pelo sinal de exibicao).
+    # "08. Resultado Operacional" ja SUBTRAIU tributaria uma vez; somar
+    # de volta aqui cancela essa subtracao == EBITDA exclui o efeito de
+    # Despesas Tributarias, por definicao (Earnings BEFORE Taxes).
+    # Validado exato contra a tabela mar-26/fev-26 fornecida pelo perito:
+    # fev-26: resultado_op(-83.243) + depreciacao(31.343) + tributaria(1.398)
+    #         = -50.502 (bruto: (50.502)) ✓
+    formula: "resultado_op + depreciacao + tributaria"
+
+  rec_desp_fin:
+    label: "11. Receitas (Despesas) Financeiras"
+    tipo: agrupador
+    subgrupos:
+      receitas_fin:
+        label: "    Receitas Financeiras"
+        tipo: receita_financeira
+        prefixos: []   # NAO CONFIRMADO — nao localizada no COA (diferenca #10)
+      despesas_fin:
+        label: "    Despesas Financeiras"
+        tipo: despesa_financeira
+        prefixos:
+          - "3.3.02"   # Atualizacoes + Juros e Descontos
+
+  lucro_antes_ir:
+    label: "12. Lucro (Prejuizo) Antes do IRPJ e CSLL"
+    tipo: subtotal
+    formula: "resultado_op + receita_financeira - despesa_financeira"
+
+  provisao_ir:
+    label: "13. (-) Provisao para IRPJ e CSLL"
+    tipo: provisao_ir
+    prefixos: []
+
+  lucro_liq:
+    label: "14. Lucro (Prejuizo) Liquido do Periodo"
+    tipo: subtotal
+    formula: "resultado_op + receita_financeira - despesa_financeira - provisao_ir"
